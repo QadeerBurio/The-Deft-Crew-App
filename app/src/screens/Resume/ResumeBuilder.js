@@ -38,11 +38,20 @@ import { INDUSTRIES, keyOf, indexOfKey, styles } from './steps/builderShared';
 // P3a (flag resumeV2): the track's step order, the new sections, progress, one-page estimate, "saved"
 import useFlag from '../../hooks/useFlag';
 import { FLAGS } from '../../api/upgradeFlags';
-import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, minutesLeft, pageEstimate, fitLine } from '../../resume/resumeV2';
+import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, pageEstimate, fitLine } from '../../resume/resumeV2';
 import ActivitiesStep from './steps/ActivitiesStep';
 import AwardsStep from './steps/AwardsStep';
 import LanguagesStep from './steps/LanguagesStep';
 import CourseworkSection from './steps/CourseworkSection';
+// P3b (flags resumeV2 + resumeCoach): the coach
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { COACH_FLAG, programmeOf, readyChecklist, meterStart, meterAdd, meterCheck } from '../../resume/coach';
+import { funnel } from '../../analytics/funnel';
+import StepTip from './coach/StepTip';
+import StoryPrompt from './coach/StoryPrompt';
+import MemoryJoggers from './coach/MemoryJoggers';
+import LiveCheck from './coach/LiveCheck';
+import { CoachSummary, CoachSkills, CoachBar, ReadyCheck, spellingLeft } from './coach/CoachTools';
 import renderStep1File from './steps/Step1Personal';
 import renderStep2File from './steps/Step2Education';
 import renderStep3File from './steps/Step3Experience';
@@ -320,6 +329,29 @@ const ResumeBuilderScreen = () => {
   const lastStep = order[order.length - 1];
   // the new steps save through the builder (a new resume is created first)
   const stepIo = { ensureResume: () => ensureResume(), updateResume: (...a) => updateResume(...a) };
+  // P3b: the coach (under resumeV2), speak mode (resumeSpeak) inside it
+  const coachFlag = useFlag(COACH_FLAG) === true; // hooks always called, in the same order
+  const speakFlag = useFlag('resumeSpeak') === true;
+  const coachOn = v2 && coachFlag;
+  const speakOn = coachOn && speakFlag;
+  const programme = programmeOf(currentResume);
+  const [ready, setReady] = useState({ open: false, items: [], loading: false });
+  const openReady = async () => {
+    const live = buildLiveResume();
+    setReady({ open: true, items: readyChecklist(live), loading: true });
+    const left = await spellingLeft(live).catch(() => 0);
+    setReady({ open: true, items: readyChecklist(live, { spellingLeft: left }), loading: false });
+    funnel('resume_ready_check', { refId: String(currentResume?._id || 'new'), left });
+  };
+  // the meter: real time and coach taps / typing to a strong one-page resume (sent once, never shown as a promise)
+  const meterId = currentResume?._id && !String(currentResume._id).startsWith('guest_') ? String(currentResume._id) : null;
+  useEffect(() => { if (coachOn && meterId) { meterStart(meterId, 'tap'); funnel('resume_coach_tap'); } }, [coachOn, meterId]);
+  useEffect(() => {
+    if (!coachOn || !meterId || !currentResume) return;
+    meterCheck(meterId, currentResume).then((m) => { if (m) funnel('resume_one_page_ready', { refId: meterId, ...m }); }).catch(() => {});
+  }, [coachOn, meterId, currentResume]);
+  const coachTap = () => { if (meterId) meterAdd(meterId, { taps: 1 }); };
+  const coachTyped = (n) => { if (meterId && n > 0) meterAdd(meterId, { typed: n }); };
 
   // Date format helper
   const formatDateForInput = (dateStr) => {
@@ -844,6 +876,46 @@ const ResumeBuilderScreen = () => {
     };
   }
 
+  // the step buttons (unchanged); with the coach they sit above the keyboard (P3-5, moved to P3b by the owner)
+  const footerEl = (
+        <View style={styles.footerContainer}>
+          <TouchableOpacity 
+            style={[styles.backButton, activeStep === firstStep && { opacity: 0.5 }]}
+            disabled={activeStep === firstStep || moveStep.running}
+            onPress={handlePrevStep}
+          >
+            <Ionicons name="arrow-back" size={16} color={T.white} />
+            <Text style={styles.backButtonText}>back</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+  style={[styles.continueButton, activeStep === lastStep && { backgroundColor: T.success }]}
+  disabled={moveStep.running || finish.running}
+  accessibilityRole="button"
+  accessibilityState={{ busy: moveStep.running || finish.running }}
+  onPress={() => {
+    if (activeStep === lastStep && coachOn) {
+      openReady(); // P3-4b "ready to send?": advice, then the same finish
+    } else if (activeStep === lastStep) {
+      // skills are saved on every add; a new resume that was never saved is created first
+      handleFinish();
+    } else {
+      handleNextStep();
+    }
+  }}
+>
+            <Text style={[styles.continueButtonText, activeStep === lastStep && { color: T.white }]}>
+              {activeStep === lastStep ? 'Finish & Preview 🚀' : 'Continue'}
+            </Text>
+            <Ionicons 
+              name={activeStep === lastStep ? "checkmark-done" : "arrow-forward"} 
+              size={16} 
+              color={activeStep === lastStep ? T.white : T.ink} 
+            />
+          </TouchableOpacity>
+        </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={T.ink} />
@@ -870,11 +942,11 @@ const ResumeBuilderScreen = () => {
 
       {/* P3-5 (resumeV2): a progress bar with the step and minutes left, instead of the icons */}
       {v2 && (
-        <View style={{ paddingHorizontal: 16, paddingTop: 8 }} accessible accessibilityLabel={`step ${order.indexOf(activeStep) + 1} of ${order.length}, about ${minutesLeft(order, activeStep)} minutes left`}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }} accessible accessibilityLabel={`step ${order.indexOf(activeStep) + 1} of ${order.length}`}>
           <View style={{ height: 6, borderRadius: 3, backgroundColor: T.line, overflow: 'hidden' }}>
             <View style={{ height: 6, borderRadius: 3, backgroundColor: T.yellow, width: `${Math.round(((order.indexOf(activeStep) + 1) / order.length) * 100)}%` }} />
           </View>
-          <Text style={{ fontFamily: F.bodyMedium, fontSize: 12, color: T.textMuted, marginTop: 6 }}>{`step ${order.indexOf(activeStep) + 1} of ${order.length} · ~${minutesLeft(order, activeStep)} min left`}</Text>
+          <Text style={{ fontFamily: F.bodyMedium, fontSize: 12, color: T.textMuted, marginTop: 6 }}>{`step ${order.indexOf(activeStep) + 1} of ${order.length}`}</Text>
         </View>
       )}
       {/* Stepper icons */}
@@ -929,6 +1001,8 @@ const ResumeBuilderScreen = () => {
             );
           })()}
           <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s, _key, stepKey) => goToStep(stepIdFor(s, stepKey, v2))} />
+          {coachOn && <StepTip step={activeStep} programme={programme} />}
+          {coachOn && <CoachBar resume={currentResume ? buildLiveResume() : null} io={stepIo} onChat={() => navigation.navigate('ResumeCoachChat', currentResume?._id ? { resumeId: currentResume._id } : { track: newTrack || 'fresher' })} />}
           {problems.length > 0 && (
             <View style={styles.problemBox} accessibilityRole="alert" testID="finish-problems">
               <Text style={styles.problemTitle}>to finish, please add:</Text>
@@ -953,47 +1027,49 @@ const ResumeBuilderScreen = () => {
           {activeStep === 7 && renderStep7()}
           {/* P3-3 (resumeV2): coursework under education; the new sections */}
           {v2 && activeStep === 2 && <CourseworkSection resume={currentResume} io={stepIo} />}
-          {activeStep === 8 && <ActivitiesStep kind="activities" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[8] = fn; }} />}
-          {activeStep === 9 && <ActivitiesStep kind="volunteering" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[9] = fn; }} />}
+          {activeStep === 8 && <ActivitiesStep kind="activities" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[8] = fn; }} coach={coachOn ? { programme, speak: speakOn, onTap: coachTap, onTyped: coachTyped } : null} />}
+          {activeStep === 9 && <ActivitiesStep kind="volunteering" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[9] = fn; }} coach={coachOn ? { programme, speak: speakOn, onTap: coachTap, onTyped: coachTyped } : null} />}
+          {/* P3b coach, per step */}
+          {coachOn && activeStep === 1 && (
+            <View>
+              <LiveCheck field="email" text={pEmail} onFix={setPEmail} />
+              <LiveCheck field="phone" text={pPhone} onFix={setPPhone} />
+              <LiveCheck field="linkedin" text={pLinkedin} />
+            </View>
+          )}
+          {coachOn && activeStep === 3 && (
+            <View>
+              <MemoryJoggers programme={programme} sections={['workExperience']} io={stepIo} onTap={coachTap} onTyped={coachTyped} />
+              {!!(workCompany.trim() || workPosition.trim()) && <StoryPrompt section="workExperience" role={workPosition} organisation={workCompany} current={workCurrent} speak={speakOn} onTap={coachTap} onTyped={coachTyped} onKeep={(lines) => setWorkDesc((d) => [d, ...lines.map((l) => `- ${l}`)].filter((x) => String(x || '').trim()).join('\n'))} />}
+              {!!workDesc.trim() && <LiveCheck field="bullet" text={workDesc.split('\n').filter((l) => l.trim()).pop()} current={workCurrent} />}
+            </View>
+          )}
+          {coachOn && activeStep === 4 && (
+            <View>
+              <MemoryJoggers programme={programme} sections={['projects', 'awards', 'certifications']} io={stepIo} onTap={coachTap} onTyped={coachTyped} />
+              {!!projName.trim() && <StoryPrompt section="projects" organisation={projName} speak={speakOn} onTap={coachTap} onTyped={coachTyped} onKeep={(lines) => setProjDesc((d) => [d, ...lines].filter((x) => String(x || '').trim()).join(' '))} />}
+            </View>
+          )}
+          {coachOn && activeStep === 6 && (
+            <View>
+              <CoachSummary
+                programme={programme}
+                university={(currentResume?.education || [])[0]?.institution || ''}
+                targetRole={getTargetRoleFallback()}
+                strengths={[...(currentResume?.activities || []).map((a) => [a.role, a.organisation].filter(Boolean).join(' at ')), ...(currentResume?.projects || []).map((x) => x.name)].filter(Boolean)}
+                skills={(currentResume?.skills || []).map((x) => x?.name || x)}
+                onPick={(t) => { coachTap(); setTargetSummary(t); ensureResume().then((r) => r?._id && updateResume(r._id, { professionalSummary: { summary: t } })).then(() => { lastSummaryRef.current = t; }).catch(() => {}); }}
+              />
+              {!!targetSummary.trim() && <LiveCheck field="summary" text={targetSummary} onFix={setTargetSummary} />}
+            </View>
+          )}
+          {coachOn && activeStep === 7 && <CoachSkills resume={currentResume} programme={programme} targetRole={getTargetRoleFallback()} io={stepIo} />}
           {activeStep === 10 && <AwardsStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[10] = fn; }} />}
           {activeStep === 11 && <LanguagesStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[11] = fn; }} />}
         </View>
 
-        {/* Bottom Stepper Navigation buttons */}
-        <View style={styles.footerContainer}>
-          <TouchableOpacity 
-            style={[styles.backButton, activeStep === firstStep && { opacity: 0.5 }]}
-            disabled={activeStep === firstStep || moveStep.running}
-            onPress={handlePrevStep}
-          >
-            <Ionicons name="arrow-back" size={16} color={T.white} />
-            <Text style={styles.backButtonText}>back</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-  style={[styles.continueButton, activeStep === lastStep && { backgroundColor: T.success }]}
-  disabled={moveStep.running || finish.running}
-  accessibilityRole="button"
-  accessibilityState={{ busy: moveStep.running || finish.running }}
-  onPress={() => {
-    if (activeStep === lastStep) {
-      // skills are saved on every add; a new resume that was never saved is created first
-      handleFinish();
-    } else {
-      handleNextStep();
-    }
-  }}
->
-            <Text style={[styles.continueButtonText, activeStep === lastStep && { color: T.white }]}>
-              {activeStep === lastStep ? 'Finish & Preview 🚀' : 'Continue'}
-            </Text>
-            <Ionicons 
-              name={activeStep === lastStep ? "checkmark-done" : "arrow-forward"} 
-              size={16} 
-              color={activeStep === lastStep ? T.white : T.ink} 
-            />
-          </TouchableOpacity>
-        </View>
+        {/* Bottom Stepper Navigation buttons (pinned above the keyboard with the coach: see below) */}
+        {!coachOn && footerEl}
 
         {optionalStep(activeStep) && (
           <TouchableOpacity onPress={handleSkipStep} disabled={moveStep.running} style={styles.skipLink} accessibilityRole="button" accessibilityLabel="skip for now">
@@ -1013,6 +1089,8 @@ const ResumeBuilderScreen = () => {
           ))}
         </View>
       </KeyboardAwareScrollView>
+      {coachOn && <KeyboardStickyView>{footerEl}</KeyboardStickyView>}
+      {coachOn && <ReadyCheck visible={ready.open} items={ready.items} loading={ready.loading} onClose={() => setReady({ open: false, items: [], loading: false })} onContinue={() => { setReady({ open: false, items: [], loading: false }); handleFinish(); }} />}
 
       {/* CLEAN MODAL PREVIEW */}
       <Modal visible={previewVisible} transparent animationType="slide" onRequestClose={() => setPreviewVisible(false)}>

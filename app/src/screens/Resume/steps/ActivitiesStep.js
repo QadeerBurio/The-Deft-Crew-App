@@ -13,6 +13,9 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../../../theme/tokens";
 import MonthYearField from "./MonthYearField";
 import { monthYearLabel } from "../../../resume/resumeV2";
 import { saveList, addOrReplace, removeKey, clean, cleanLines, keyOf } from "./sectionList";
+import MemoryJoggers from "../coach/MemoryJoggers";
+import StoryPrompt from "../coach/StoryPrompt";
+import LiveCheck from "../coach/LiveCheck";
 
 const COPY = {
   activities: { org: "society, club or team", orgPh: "e.g. IEEE student branch", role: "your role", rolePh: "e.g. events lead, member, captain", add: "add activity", empty: "nothing here yet. a society, a sports team, class rep: it all counts." },
@@ -20,7 +23,9 @@ const COPY = {
 };
 const EMPTY = { organisation: "", role: "", startDate: "", endDate: "", current: false, lines: ["", "", ""] };
 
-export default function ActivitiesStep({ kind = "activities", resume, io, registerAdd }) {
+// coach (P3b, flags resumeV2 + resumeCoach): { programme, speak, onTap, onTyped } → memory joggers on top, "answer,
+// don't write" for the entry being added (its lines fill the fields below), live checks under each line
+export default function ActivitiesStep({ kind = "activities", resume, io, registerAdd, coach = null }) {
   const c = COPY[kind] || COPY.activities;
   const items = Array.isArray(resume?.[kind]) ? resume[kind] : [];
   const [form, setForm] = useState(EMPTY);
@@ -50,9 +55,17 @@ export default function ActivitiesStep({ kind = "activities", resume, io, regist
   };
   const remove = (x) => saveList(io, kind, removeKey(keyOf(x))).catch(() => setErr("not deleted. try again."));
 
+  // the coach's lines fill the empty line fields first (the student can still edit them before adding)
+  const fillLines = (kept) => setForm((f) => {
+    const lines = f.lines.filter((l) => l.trim());
+    const next = [...lines, ...kept].slice(0, 3);
+    return { ...f, lines: [...next, "", "", ""].slice(0, Math.max(3, next.length)) };
+  });
+
   return (
     <View>
-      {items.length === 0 ? <Text style={s.empty} maxFontSizeMultiplier={MAX_FONT_SCALE}>{c.empty}</Text> : items.map((x) => (
+      {coach && <MemoryJoggers programme={coach.programme} sections={kind === "volunteering" ? ["volunteering"] : ["activities", "awards", "certifications"]} io={io} onTap={coach.onTap} onTyped={coach.onTyped} />}
+      {items.length === 0 ?<Text style={s.empty} maxFontSizeMultiplier={MAX_FONT_SCALE}>{c.empty}</Text> : items.map((x) => (
         <Card key={keyOf(x)} small style={s.item}>
           <View style={s.itemRow}>
             <View style={{ flex: 1 }}>
@@ -71,8 +84,12 @@ export default function ActivitiesStep({ kind = "activities", resume, io, regist
       <MonthYearField label="from" value={form.startDate} onChange={(v) => set({ startDate: v })} />
       <MonthYearField label="to" value={form.endDate} onChange={(v) => set({ endDate: v })} present={form.current} onPresentChange={(v) => set({ current: v })} />
       <Text style={s.q} maxFontSizeMultiplier={MAX_FONT_SCALE}>what did you do there? one short line each (optional)</Text>
+      {coach && typed && <StoryPrompt section={kind} role={form.role} organisation={form.organisation} current={form.current} speak={coach.speak} onTap={coach.onTap} onTyped={coach.onTyped} onKeep={fillLines} />}
       {form.lines.map((l, i) => (
-        <Input key={i} value={l} onChangeText={(v) => set({ lines: form.lines.map((x, j) => (j === i ? v : x)) })} placeholder={i === 0 ? "e.g. organised the welcome week" : ""} maxLength={240} accessibilityLabel={`line ${i + 1}`} />
+        <View key={i}>
+          <Input value={l} onChangeText={(v) => set({ lines: form.lines.map((x, j) => (j === i ? v : x)) })} placeholder={i === 0 ? "e.g. organised the welcome week" : ""} maxLength={240} accessibilityLabel={`line ${i + 1}`} />
+          {coach && !!l.trim() && <LiveCheck field="bullet" text={l} current={form.current} onFix={(v) => set({ lines: form.lines.map((x, j) => (j === i ? v : x)) })} />}
+        </View>
       ))}
       {!!err && <Text style={s.err} accessibilityLiveRegion="polite" maxFontSizeMultiplier={MAX_FONT_SCALE}>{err}</Text>}
       <Button title={editing ? "save changes" : c.add} variant="secondary" onPress={() => add()} loading={busy} disabled={!typed} />

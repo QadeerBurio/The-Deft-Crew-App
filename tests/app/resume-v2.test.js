@@ -4,7 +4,7 @@
 //     city, no graduation month made up from a year), the one-page estimate, month + year
 //   the renderer (templateService): every older resume renders byte for byte as before (35 frozen outputs); the new
 //     sections print with recruiter headings, in the fresher order
-//   the builder with the flag on: progress "step 1 of 11 · ~N min left" instead of the icons, the fresher order,
+//   the builder with the flag on: progress "step 1 of 11" (no minutes in the copy until measured) instead of the icons, the fresher order,
 //     coursework under education, the new steps save their lists, "fits on 1 page ✓" and "saved ✓", finish on the
 //     last step of the order; a new resume is created with its track; "upload my cv" opens the upload
 //   ResumeStart: three cards, the track question, a profile resume created and reviewed
@@ -108,10 +108,14 @@ global.__DEV__ = false;
   const store = new Map();
   const storage = { getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => { store.set(k, String(v)); }, removeItem: async (k) => { store.delete(k); } };
   let flagOn = true;
+  let coachOn = false;
   const load = H.loader({
     react: React, "react-native": rn,
     "@expo/vector-icons": { Ionicons: "Icon" },
-    "react-native-keyboard-controller": { KeyboardAwareScrollView: "KeyboardAwareScrollView" },
+    "react-native-keyboard-controller": { KeyboardAwareScrollView: "KeyboardAwareScrollView", KeyboardStickyView: "KeyboardStickyView" },
+    "../api/api": { __esModule: true, default: { post: async (url) => ({ data: { data: url === "/resume/ai/check" ? { issues: [] } : null } }) } },
+    "../../analytics/funnel": { funnel: () => {} },
+    "../../../analytics/funnel": { funnel: () => {} },
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }) },
     "/app/src/context/AuthContext": { AuthContext },
     "../../guest/GuestGate": { useGuestGate: () => ({ requireAccount: () => true, isGuest: false }) },
@@ -122,7 +126,7 @@ global.__DEV__ = false;
     "/app/src/api/resumeApi": { __esModule: true, default: resumeApi },
     "@react-native-async-storage/async-storage": { __esModule: true, default: storage },
     "../analytics/metaEvents": { metaEvents: { aiResumeCreated() {} } },
-    "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "resumeV2" ? flagOn : false) },
+    "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "resumeV2" ? flagOn : name === "resumeCoach" ? coachOn : false) },
   });
   const { default: ResumeProvider } = load(path.join(H.SRC, "context/ResumeContext.js"));
   const { default: Builder } = load(path.join(H.SRC, "screens/Resume/ResumeBuilder.js"));
@@ -136,7 +140,7 @@ global.__DEV__ = false;
 
   server.list = [{ _id: "r1", settings: { track: "fresher" }, personalInfo: { firstName: "Sana", lastName: "Khan", email: "s@x.co" }, professionalSummary: {}, education: [], workExperience: [], projects: [], certifications: [], skills: [], targetJobs: [] }];
   let m = await open({ resumeId: "r1" });
-  ok(/step 1 of 11 · ~9 min left/.test(text(m)) && !btn(m, "step 2: Education"), "a progress line ('step 1 of 11 · ~9 min left') instead of the step icons");
+  ok(/step 1 of 11/.test(text(m)) && !/min left/.test(text(m)) && !btn(m, "step 2: Education"), "a progress line ('step 1 of 11', no minutes until they are measured) instead of the step icons");
   ok(/1\/11/.test(text(m)), "…the badge counts the track's steps");
   ok(/fits on 1 page ✓/.test(text(m)), "the one-page estimate shows");
   await tap(m, "Continue", 40);
@@ -188,6 +192,23 @@ global.__DEV__ = false;
   await H.tick(900); m.rerender(); // the builder shows "structuring" for 600 ms before it moves on
   ok(nav.calls.some((c) => c[0] === "navigate" && c[1] === "ResumeImportReview"), "'upload my cv' opens the upload, then 'check your resume'", JSON.stringify(nav.calls));
   m.unmount();
+
+  console.log("── the builder with the coach (P3b)");
+  coachOn = true;
+  server.list = server.list.filter((x) => x._id === "r1");
+  server.list[0].education = [{ _id: "e1", institution: "IBA", degree: "BBA" }]; // finish needs education, experience or a project
+  m = await open({ resumeId: "r1" });
+  const sticky = H.find(m.tree, (n) => n.type === "KeyboardStickyView");
+  const scrollV = H.find(m.tree, (n) => n.type === "KeyboardAwareScrollView");
+  ok(sticky && H.textOf(sticky).includes("Continue") && !H.textOf(scrollV).includes("Continue"), "coach on: the step buttons are pinned above the keyboard, outside the scroll view");
+  ok(/fix everything/.test(text(m)) && /build it by chatting/.test(text(m)), "…the coach bar (fix everything, build it by chatting)");
+  for (let i = 0; i < 10; i++) await tap(m, "Continue", 30);
+  await tap(m, "Finish & Preview", 60);
+  ok(/ready to send?/.test(text(m)) && !nav.calls.some((c) => c[1] === "ResumeView"), "finish → 'ready to send?' first (advice), not the preview yet");
+  await tap(m, "continue to the preview", 80);
+  ok(nav.calls.some((c) => c[0] === "navigate" && c[1] === "ResumeView"), "continue → the same finish as before (the preview)", JSON.stringify(nav.calls));
+  m.unmount();
+  coachOn = false;
 
   console.log("── the builder, flag off");
   flagOn = false;
