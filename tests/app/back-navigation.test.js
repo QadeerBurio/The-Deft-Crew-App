@@ -37,6 +37,55 @@ global.__DEV__ = false;
   ok(/<Stack\.Screen name="Travelling" component=\{TravelingScreen\} options=\{\{ gestureEnabled: true \}\} \/>/.test(drawerSrc), "Travelling: swipe back on");
   ok(/navigation\.navigate\("HomeTabs", \{ screen: "About" \}\)/.test(H.read("app/src/screens/SettingScreen.js")), "Settings (profile stack) opens About in the home stack by its nested path");
 
+  console.log("── every registered screen has a back target (Q-a, plan Q-2)");
+  {
+    const navs = {
+      ...reg,
+      HOME_TAB: names(H.read("app/src/navigation/HomeStack.js")),
+      RESUME: names(H.read("app/src/navigation/ResumeNavigator.js")),
+      SOCIAL_STACK: names(between(drawerSrc, "function SocialStackNavigator()", "function HomeStackNavigator()")),
+      SOCIAL_TABS: names(H.read("app/src/screens/Social/Social.js")),
+    };
+    ok(Object.keys(navs).length === 10 && Object.values(navs).every((v) => v.length > 0), "10 navigators found, each with screens", Object.entries(navs).map(([k, v]) => `${k}:${v.length}`).join(" "));
+    ok(same(Object.keys(R.BACK), Object.keys(navs)), "routes.js BACK has one entry per navigator", Object.keys(R.BACK).join());
+    // the group pathTo() opens a name in (same order as pathTo)
+    const groupOf = (n) => ["ROOT", "DRAWER", "TABS", "HOME_STACK", "SKILLSHARE", "PROFILE"].find((g) => R[g].includes(n)) || null;
+    const total = Object.values(navs).reduce((a, v) => a + v.length, 0);
+    const missing = [], stale = [], broken = [];
+    for (const [nav, screens] of Object.entries(navs)) {
+      const b = R.BACK[nav] || {};
+      for (const n of Object.keys(b.parent || {})) if (!screens.includes(n)) stale.push(`${nav}.${n}`);
+      for (const n of b.start || []) if (!screens.includes(n)) stale.push(`${nav}.start ${n}`);
+      if (b.tabs) continue;
+      for (const n of screens) {
+        if ((b.start || []).includes(n)) continue;
+        if (!b.parent?.[n]) { missing.push(`${nav}.${n}`); continue; }
+        // follow the chain: same navigator first, else wherever pathTo opens the parent
+        let cur = [nav, n]; const seen = new Set(); let end = false;
+        for (let i = 0; i < 12 && !end; i++) {
+          const key = cur.join(".");
+          if (seen.has(key)) break;
+          seen.add(key);
+          const [cn, cs] = cur; const cb = R.BACK[cn];
+          if (cb.tabs || (cb.start || []).includes(cs)) { end = true; break; }
+          const p = R.backParent(cn, cs);
+          if (!p) break;
+          if (navs[cn].includes(p)) cur = [cn, p];
+          else if (groupOf(p) && R.pathTo(p)) cur = [groupOf(p), p];
+          else break;
+        }
+        if (!end) broken.push(`${nav}.${n}`);
+      }
+    }
+    ok(missing.length === 0, `every one of the ${total} registered screens is a start screen, a tab or has a parent`, missing.join(", "));
+    ok(stale.length === 0, "no BACK entry names a screen its navigator doesn't register", stale.join(", "));
+    ok(broken.length === 0, "every chain of parents ends at a start screen or a tab (no loops, no dead ends)", broken.join(", "));
+    ok(R.backParent("HOME_STACK", "EventTicket") === "Events" && R.backParent("TABS", "Campus") === null && R.backParent("RESUME", "ResumeDashboard") === null, "backParent: a ticket goes back to Events; tabs and start screens have none");
+    // swipe back on every pushed screen (rule 1): no navigator turns it off
+    const navFiles = ["AuthNavigator", "DrawerNavigator", "HomeStack", "ProfileStack", "ResumeNavigator", "TabNavigator"].map((f) => H.read(`app/src/navigation/${f}.js`)).concat(H.read("app/src/screens/Social/Social.js"));
+    ok(navFiles.every((s) => !/gestureEnabled\s*:\s*false|gestureEnabled=\{false\}/.test(s)), "no navigator turns swipe back off (gestureEnabled: false)");
+  }
+
   console.log("── drawer swipe");
   const st = (type, index, routes) => ({ type, index, routes });
   const homeTabs = (homeStack) => ({ name: "HomeTabs", state: homeStack });
