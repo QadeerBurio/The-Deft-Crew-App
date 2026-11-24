@@ -9,9 +9,9 @@ const H = require("./harness");
 const { ok, done } = H.counter();
 global.__DEV__ = false;
 
-function setup({ params = { resumeId: "r1" }, api = {} } = {}) {
+function setup({ params = { resumeId: "r1" }, api = {}, rnExtra = {} } = {}) {
   const { React, mount, contexts } = H.makeReact();
-  const { rn } = H.makeRN();
+  const { rn } = H.makeRN(rnExtra);
   const nav = { calls: [], goBack() {}, navigate: (...a) => nav.calls.push(a) };
   const events = [];
   const el = (type) => (p) => ({ type, props: { ...p, accessibilityLabel: p.accessibilityLabel || p.label || p.title, children: p.children ?? null } });
@@ -126,6 +126,49 @@ function setup({ params = { resumeId: "r1" }, api = {} } = {}) {
     await H.tick(3);
     ok(m.tree == null, "no verified fact: nothing shown at all");
     m.unmount();
+  }
+
+  console.log("── public resume page (share screen)");
+  {
+    const URL1 = "https://gettdc.pk/r/AbCdEfGhIjKlMnOpQrStU_";
+    const URL2 = "https://gettdc.pk/r/ZyXwVuTsRqPoNmLkJiHgF-";
+    let server = { on: false, url: null, selfUrl: null, showPhone: false, showEmail: false, views: 0 };
+    const sent = []; const opened = []; const alerts = []; const links = [];
+    const t = setup({
+      rnExtra: { Linking: { openURL: async (u) => { opened.push(u); } }, Alert: { alert: (title, text, buttons) => alerts.push({ title, text, buttons }) } },
+      api: {
+        getPublicPage: async () => server,
+        setPublicPage: async (id, patch) => { sent.push([id, patch]); if (patch.on === true) server = { ...server, on: true, url: server.url || URL1, selfUrl: `${server.url || URL1}?k=self` }; if (patch.on === false) server = { ...server, on: false }; for (const k of ["showPhone", "showEmail"]) if (k in patch) server = { ...server, [k]: patch[k] }; return server.on ? server : { ...server, url: null, selfUrl: null }; },
+        newPublicLink: async () => { server = { ...server, url: URL2, selfUrl: `${URL2}?k=self`, views: 0 }; return server; },
+      },
+    });
+    const Card = t.load(path.join(H.SRC, "screens/Resume/finish/PublicPageCard.js")).default;
+    const m = t.mount(t.React.createElement(Card, { resume: { _id: "r1" }, onLink: (u) => links.push(u) }));
+    await H.tick(3);
+    ok(/off: no one can see it/.test(H.textOf(m.tree)) && !/gettdc\.pk\/r/.test(H.textOf(m.tree)) && links[links.length - 1] === "", "off by default: no link anywhere (the share screen's link options stay hidden)");
+    H.byLabel(m.tree, "share my resume page").props.onValueChange(true);
+    await H.tick(3);
+    const text = H.textOf(m.tree);
+    ok(JSON.stringify(sent[0]) === JSON.stringify(["r1", { on: true }]) && text.includes(URL1) && links[links.length - 1] === URL1 && t.events.some((e) => e[0] === "resume_public_on"), "turn on → the link, handed to the share screen; funnel resume_public_on");
+    ok(/0 views · your own visits aren't counted/.test(text), "views: the real number, own visits not counted");
+    ok(/street address and postal code never show/.test(text), "says what never shows");
+    H.byLabel(m.tree, "show my phone on the page").props.onValueChange(true);
+    await H.tick(3);
+    ok(JSON.stringify(sent[1]) === JSON.stringify(["r1", { showPhone: true }]), "phone: only when the student turns it on");
+    H.byLabel(m.tree, "open my resume page").props.onPress();
+    await H.tick(2);
+    ok(opened[0] === `${URL1}?k=self`, "open my page → the link with the student's own key (not counted)");
+    H.byLabel(m.tree, "make a new link").props.onPress();
+    ok(alerts[0] && /old link stops working/.test(alerts[0].text), "new link asks first: the old link stops working");
+    alerts[0].buttons.find((b) => b.text === "new link").onPress();
+    await H.tick(3);
+    ok(H.textOf(m.tree).includes(URL2) && links[links.length - 1] === URL2 && t.events.some((e) => e[0] === "resume_public_new_link"), "…then the new link everywhere");
+    H.byLabel(m.tree, "share my resume page").props.onValueChange(false);
+    await H.tick(3);
+    ok(links[links.length - 1] === "" && /off: no one can see it/.test(H.textOf(m.tree)) && t.events.some((e) => e[0] === "resume_public_off"), "turn off → no link; funnel resume_public_off");
+    m.unmount();
+    const share = H.read("app/src/screens/Resume/ResumeShare.js");
+    ok(/const pageFlag = useFlag\('resumePublicPage'\) === true;/.test(share) && /const pageOn = v2 && pageFlag;/.test(share) && /const shareLink = pageOn \? pageUrl : placeholderLink;/.test(share), "share screen: the flag hook always called; the page's link only with resumeV2 + resumePublicPage (else today's hidden placeholder)");
   }
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
