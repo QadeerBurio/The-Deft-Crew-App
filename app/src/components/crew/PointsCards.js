@@ -1,7 +1,7 @@
 // app/src/components/crew/PointsCards.js
 // The crew screen's cards: skeleton, hero, members, levels, founder banner (moved unchanged out of components/Points.js).
 import React, { useEffect, useRef, memo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Animated, InteractionManager } from 'react-native'; // r8: InteractionManager was used without its import (crew screen crash)
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from 'react-native-safe-area-context';
