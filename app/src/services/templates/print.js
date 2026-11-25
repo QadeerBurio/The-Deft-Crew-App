@@ -5,7 +5,7 @@
 // P3d: the "verified by tdc" line, only on a resume the student added it to (settings.verifiedLine). The facts come
 // from the server, which answers only with resumeV2 + resumeVerified on: a flag off (or no connection) = no line.
 //   resumeHtmlWithFonts(resume, templateId?, customStyles?, deps?) → Promise<html>
-import { renderResumeHTML, templateOf, customise } from '../templateService';
+import { renderResumeHTML, renderCoverLetterHTML, templateOf, customise } from '../templateService';
 import { LIBRARY } from './library';
 import { fontCssFor, familiesFor } from './fonts';
 
@@ -41,6 +41,25 @@ export async function resumeHtmlWithFonts(resume, templateId = resume?.template,
     if (fontCss) cssCache.set(key, fontCss);
   }
   return renderResumeHTML(resume, templateId, customStyles || {}, false, verified ? { fontCss, verified } : { fontCss });
+}
+
+// r7 (P3-9, resumeWriter): the cover letter in the resume's design, with the same fonts embedded
+//   coverLetterHtmlWithFonts(resume, letter: { company, paragraphs, date }, deps?) → Promise<html>
+export async function coverLetterHtmlWithFonts(resume, letter, deps = {}) {
+  const templateId = resume?.template;
+  const customStyles = resume?.customStyles || {};
+  const base = templateOf(templateId);
+  const library = LIBRARY.some((t) => t.id === base.id);
+  const { look } = customise(base.look, customStyles, { library, resume });
+  const families = familiesFor(look, resume);
+  if (!families.some((f) => f !== 'Noto Naskh Arabic')) return renderCoverLetterHTML(resume, templateId, customStyles, letter);
+  const key = families.join('|');
+  let fontCss = cssCache.get(key);
+  if (fontCss == null) {
+    fontCss = await fontCssFor(look, resume, deps.read);
+    if (fontCss) cssCache.set(key, fontCss);
+  }
+  return renderCoverLetterHTML(resume, templateId, customStyles, letter, { fontCss });
 }
 
 export const _clearFontCache = () => cssCache.clear();

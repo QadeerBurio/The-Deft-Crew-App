@@ -158,7 +158,7 @@ export const BACK = {
   // the resume section (navigation/ResumeNavigator.js)
   RESUME: {
     start: ["ResumeDashboard"],
-    parent: { ResumeStart: "ResumeDashboard", ResumeImportReview: "ResumeStart", ResumeBuilder: "ResumeDashboard", ResumeCoachChat: "ResumeBuilder", ResumeView: "ResumeDashboard", ResumeFinish: "ResumeDashboard", ResumeFeedback: "ResumeFinish", ResumeTemplate: "ResumeDashboard", ResumeShare: "ResumeDashboard", ResumeAnalytics: "ResumeDashboard", ResumeSettings: "ResumeDashboard", ResumeStudio: "ResumeDashboard" },
+    parent: { ResumeStart: "ResumeDashboard", ResumeImportReview: "ResumeStart", ResumeBuilder: "ResumeDashboard", ResumeCoachChat: "ResumeBuilder", ResumeView: "ResumeDashboard", ResumeFinish: "ResumeDashboard", ResumeFeedback: "ResumeFinish", ResumeWriter: "ResumeDashboard", ResumeTemplate: "ResumeDashboard", ResumeShare: "ResumeDashboard", ResumeAnalytics: "ResumeDashboard", ResumeSettings: "ResumeDashboard", ResumeStudio: "ResumeDashboard" },
   },
   // the social section's stack (DrawerNavigator SocialStackNavigator) and its tabs (screens/Social/Social.js)
   SOCIAL_STACK: {

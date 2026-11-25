@@ -60,6 +60,7 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
   const newResumeScreen = resumeV2 ? 'ResumeStart' : 'ResumeBuilder';
   // P3d (resumeV2 + resumeFeedback): recruiter-style feedback on the selected resume
   const feedbackOn = useFlag("resumeFeedback") === true && resumeV2;
+  const writerOn = useFlag("resumeWriter") === true && resumeV2; // r7 (P3-9): cover letter + linkedin
   // an invite push without a job: { openInvites: true } scrolls to the invites card
   const openInvites = !!route?.params?.openInvites;
   const scrollRef = useRef(null);
@@ -947,6 +948,15 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                       <TouchableOpacity style={[RD.studioBtn, RD.studioBtnLight]} accessibilityRole="button" accessibilityLabel="get recruiter feedback on this resume"
                         onPress={() => navigation.navigate('ResumeFeedback', { resumeId: selectedResume._id })}>
                         <Text style={[RD.studioBtnText, { color: T.ink }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>get recruiter feedback</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {writerOn && (
+                    <View style={RD.section}>
+                      <TouchableOpacity style={[RD.studioBtn, RD.studioBtnLight]} accessibilityRole="button" accessibilityLabel="write a cover letter or linkedin profile from this resume"
+                        onPress={() => navigation.navigate('ResumeWriter', { resumeId: selectedResume._id })}>
+                        <Text style={[RD.studioBtnText, { color: T.ink }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>cover letter & linkedin</Text>
                       </TouchableOpacity>
                     </View>
                   )}

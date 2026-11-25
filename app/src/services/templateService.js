@@ -20,6 +20,7 @@
 // page renders with it). This file keeps every name the app imports.
 export {
   TEMPLATES, canonicalTemplate, templateOf, getDisplayLocation, formatDate, formatDateRange, customise, renderResumeHTML,
+  renderCoverLetterHTML, // r7 (P3-9, resumeWriter): the cover letter in the resume's design
 } from '../utils/resumeRender';
 
 export default function DummyTemplateServiceComponent() { return null; }

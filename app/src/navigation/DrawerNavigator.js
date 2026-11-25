@@ -239,6 +239,7 @@ const FULLSCREEN_SCREENS = [
   'ResumeStart',
   'ResumeCoachChat',
   'ResumeFeedback', // P3d
+  'ResumeWriter', // r7 (P3-9)
   'ResumeFinish', // P3d
   'ResumeStudio',
   'JobDetails',
