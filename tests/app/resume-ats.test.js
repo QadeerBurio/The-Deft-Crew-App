@@ -44,6 +44,7 @@ const EXPERIENCED = {
   const page = await browser.newPage();
   const norm = (s) => s.replace(/\s+/g, " ").replace(/[‐-―]/g, "-").toLowerCase();
   const results = {};
+  const onePage = {}; // owner (25 Nov 2026): the one-page test, on the real PDF of the fresher sample
   for (const id of ids) {
     let safe = true;
     const why = [];
@@ -52,6 +53,7 @@ const EXPERIENCED = {
       await page.setContent(html, { waitUntil: "load" });
       const file = path.join(tmp, `${id}-${label}.pdf`);
       await page.pdf({ path: file, format: "A4", printBackground: true, preferCSSPageSize: true });
+      if (label === "fresher") onePage[id] = (fs.readFileSync(file).toString("latin1").match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
       const text = norm(execFileSync(pdftotext, ["-enc", "UTF-8", file, "-"]).toString("utf8"));
       // what must come out, in document order: name, contact, then each heading and each entry title as the HTML has them
       const expected = await page.evaluate(() => [...document.querySelectorAll("h1, .contact, h2, .entry .t")].map((e) => e.innerText.replace(/\s+/g, " ").trim()).filter(Boolean));
@@ -72,6 +74,12 @@ const EXPERIENCED = {
     else ok(safe, `${id}: ATS-safe (name, contact, every heading and entry in reading order, both resumes)`, why.join(" | "));
   }
   await browser.close();
+  // the 10 new templates (owner: each must pass it); the five older ones are reported, not required (today several
+  // need two pages for this sample)
+  const libIds = LIBRARY.map((t) => t.id);
+  const notOne = libIds.filter((id) => onePage[id] !== 1).map((id) => `${id}: ${onePage[id]} pages`);
+  ok(libIds.length === 10 && notOne.length === 0, `one-page test: each of the 10 new templates prints the fresher sample on exactly one A4 page`, notOne.join(", "));
+  console.log(`   (older templates, for information: ${svc.TEMPLATES.map((t) => `${t.id} ${onePage[t.id]}`).join(", ")} pages)`);
   fs.rmSync(tmp, { recursive: true, force: true });
   const wrong = LIBRARY.filter((t) => (t.ats === "safe") !== results[t.id].safe).map((t) => `${t.id}: says ${t.ats}, test ${results[t.id].safe ? "safe" : "not safe"}`);
   ok(LIBRARY.every((t) => t.ats === "safe" || t.ats === "design") && wrong.length === 0, "every library template's badge matches the test", wrong.join(", "));
