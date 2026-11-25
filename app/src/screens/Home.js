@@ -45,6 +45,8 @@ import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
 import { navigateAnywhere } from "../navigation/routes";
 import CrewDailyCard from "../crew/CrewDailyCard";
 import CityCheckCard from "./home/CityCheckCard"; // P5b (flag cityCheck)
+import NextActionCard from "./home/NextActionCard"; // P5c (flag homeNextAction)
+import GoalsSheet from "./home/GoalsSheet"; // P5c (flag onboardingGoals)
 
 // The latest-confession section (HomeCampus) is commented out below; while it is, its
 // request (the whole confessions feed) does not run. Set true together with the section.
@@ -413,6 +415,10 @@ export default function Home({ navigation }) {
               />
             )}
           </FadeInView>
+
+          {/* P5c (homeNextAction, off): one next step at the top; (onboardingGoals, off): the goals sheet, once */}
+          <NextActionCard signedIn={signedIn} />
+          {signedIn && <GoalsSheet />}
 
           {/* 🆕 Daily Drop */}
           {flags?.dailyDrop && (
