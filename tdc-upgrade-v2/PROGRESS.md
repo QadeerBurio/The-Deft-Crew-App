@@ -800,7 +800,34 @@ Everything new is behind a flag, all off. Flag off = today's behaviour (checked 
   template takes a photo, and one-page depends on the student's content. These filters would show nothing or
   everything, which the owner's backlog note anticipated ("once such templates exist").
 
-## Final status after r7 (25 Nov 2026; release/r7 on main in all three repos)
+## r8: final round (owner, 25 Nov 2026; branch `upgrade/r8-fixes` from `main` in all three repos)
+
+- **Crew screen crash fixed** ("Property 'InteractionManager' doesn't exist", dev build): `components/crew/PointsCards.js`,
+  split out of Points.js in Q-a, used `InteractionManager` without importing it. A render test of the real screen
+  (`tests/app/crew-screen-render.test.js`, 34 checks: P1 / P2 flags off and on; the server's real `/engagement/me` shapes;
+  empty referrals, first-name-only, guest, approved ambassador) fails without the import. No other crash with real
+  shapes: the "6 errors" were that one error repeated by the overlay.
+- **Lint for undefined names** (`eslint.undef.config.js`, `tests/app/lint-undef.test.js`, part of `run-all`): app-wide 1
+  found (the one above). Expo's config adds 1,000+ browser globals; several share a name with React Native APIs
+  (Keyboard, Image, Text), so they are removed for native files (kept for `*.web.*`). The test self-checks with three
+  planted mistakes. All 362 files in app/src are covered.
+- **Store app compatibility** (`server/tests/store-app-compat`): reply shapes the live store app (APP cdf72e6) reads for
+  the crew, home, confessions, resume and profile screens, recorded from the server it was built against (tag
+  pre-upgrade-2026-11-24): every field still comes with the same type and status (15/15). That old server answered
+  `GET /api/auth/me` with 400 (the `/:id` route came first); today it answers with the user.
+- **All flags on together**: server `tests/all-flags-on` (48 flags; 32 reads + 8 main writes, no server error, no hidden
+  field in 74 replies; then all off); app: the confession screen and the template screen with every flag on.
+- **Template studio**: gallery previews (each a WebView with fonts) mount 8 at first, then 6 more near the end (was 18
+  at once with all 15 templates).
+- **Public routes added in the upgrade without a limit** now have one (`middleware/publicLimit.js`): safety e-mail
+  links, crew / invites config, credential PDF links, public resume fonts (`tests/public-limits`).
+- **Shopify webhooks** (branch `shopify/fix-compliance-webhook`): signature over the raw body (the parsed object made
+  every real webhook fail with 500), length-safe compare, 401 for bad / missing signature or no secret (logged once),
+  rate limits on `/webhooks` and `/api/shopify-app`, the dead allowlist entry removed (`tests/shopify-webhooks` 17/17).
+- Docs final: OTA-PLAN.md (step 0 = which Expo project the live builds listen to), release-1.3.0.md (three owner values
+  only), FLAG-ROLLOUT.md (r7 / r8 flags and controls).
+
+## Final status after r8 (25 Nov 2026)
 
 "Built" = the code is written, tested and on main, with every new feature behind a flag that is off. Switching a
 flag on is a separate owner step (`FLAG-ROLLOUT.md`).
@@ -815,7 +842,7 @@ flag on is a separate owner step (`FLAG-ROLLOUT.md`).
 | P3 resume | ~97% | (1) "next" pinned above the keyboard: needs a phone or emulator, goes with the keyboard migration. (2) Gallery filters photo / two-column / one-page: no such templates exist (all single-column, every one takes a photo, one page depends on content); owner decision. Before switch-on: the owner's design approval (`resumeTemplatesV2`). |
 | P4 confessions | ~98% | `/c/<id>` opening the app directly: 1.3.0 build. Before switch-on: the handle word-list approval (`confessionHandles`), the Railway variables `SAFETY_ALERT_EMAILS` and `SAFETY_APPEAL_EMAIL`, and the helpline call-tests. |
 | P5 polish | ~95% | P5-8 rate-us needs `expo-store-review` (1.3.0 build). |
-| Q quality | ~90% | The keyboard migration (27 screens) and running the 8 Maestro flows need an emulator or phone. |
+| Q quality | ~92% | The keyboard migration (27 screens) and running the 8 Maestro flows need an emulator or phone. Lint for undefined names, the store-app compatibility test and the all-flags-on checks are in the test runs (r8). |
 
 Waiting on the owner: store versions for the OTA plan; the gettdc.pk DNS switch, then a re-check; Play SHA-256 and
 Apple Team ID; an emulator; the handle word-list and template design approvals; the Railway safety variables.

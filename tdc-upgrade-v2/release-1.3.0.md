@@ -1,141 +1,107 @@
-# 1.3.0 store build: native changes waiting for it
+# 1.3.0 store build: final steps (ready to run, not built)
 
-Everything native in the upgrade goes into **one** store build (plan §1 rule 9, owner). Nothing here is applied
-yet: `app.json` and the native packages stay as they are until the owner says "build 1.3.0". JS-only changes keep
-shipping over the air per live runtime version.
+Every native change in the upgrade goes into **one** store build (plan §1 rule 9). Nothing here is applied yet. Run it
+on a `release/1.3.0` branch from `main`, in a clean clone (never the working copy with the owner's own `app.json`
+edit), when the owner says "build 1.3.0". JS-only changes keep shipping over the air (OTA-PLAN.md).
 
-## 1. App links for invite links (P1, owner decision #4)
+**Three values only the owner has** (everything else below is exact):
 
-`https://gettdc.pk/i/<CODE>` opens the app (signup with the code filled in) instead of the web page.
+| placeholder | where to get it |
+|---|---|
+| `<PLAY_SHA256>` | Play Console → Setup → App integrity → App signing key certificate → SHA-256 (add the upload key's too if it differs) |
+| `<APPLE_TEAM_ID>` | developer.apple.com → Membership → Team ID |
+| `<EXPO_PROJECT>` | the one Expo project to unify on: `112506b0-7553-4a1b-afeb-6a37019cc15f` (aqkhan622) or `d14cdf3a-2494-4d4f-bee0-90f862bf3389` (aqkhan621), and its account `<EXPO_OWNER>` |
 
-**Before the build, fill in (owner):**
-- `edu-boost/public/.well-known/assetlinks.json`: replace `REPLACE_WITH_PLAY_APP_SIGNING_SHA256_BEFORE_1.3.0` with the
-  SHA-256 of the **Play App Signing** key (Play Console → Setup → App integrity → App signing key certificate).
-  If the upload key differs, add both fingerprints.
-- `edu-boost/public/.well-known/apple-app-site-association`: replace `REPLACE_WITH_APPLE_TEAM_ID` with the Apple
-  Team ID (developer.apple.com → Membership).
-- Deploy the portal and check both URLs open with `Content-Type: application/json`:
-  `https://gettdc.pk/.well-known/assetlinks.json` and `https://gettdc.pk/.well-known/apple-app-site-association`
-  (`vercel.json` sets the header for the second).
+The Sentry DSN and auth token are EAS secrets the owner sets (step 5); they never go in the repo.
 
-**`app.json` changes (apply at build time):**
+Order: 0 → 7, in one branch, then one build. Each step says how to check it.
 
-Android: add a second entry to `expo.android.intentFilters` (keep the existing ones):
-```json
-{
-  "action": "VIEW",
-  "autoVerify": true,
-  "data": [{ "scheme": "https", "host": "gettdc.pk", "pathPrefix": "/i/" }],
-  "category": ["BROWSABLE", "DEFAULT"]
-}
+## 0. Branch and version
+
+```sh
+git checkout -b release/1.3.0 main
 ```
-iOS: add to `expo.ios`:
+`app.json`: `"version": "1.3.0"` (runtimeVersion policy `appVersion` → a new runtime; OTA for 1.2.x continues
+separately), `android.versionCode` 90, `ios.buildNumber` "90".
+
+## 1. One Expo project: `updates.url` and `projectId` must match
+
+`app.json`:
 ```json
-"associatedDomains": ["applinks:gettdc.pk"]
+"owner": "<EXPO_OWNER>",
+"updates": { "url": "https://u.expo.dev/<EXPO_PROJECT>", "checkAutomatically": "ON_LOAD", "fallbackToCacheTimeout": 0 },
+"extra": { "eas": { "projectId": "<EXPO_PROJECT>" } }
 ```
-(The Apple Developer account must have the Associated Domains capability on the app id; EAS can enable it.)
+Check: `eas login` as `<EXPO_OWNER>`, `eas project:info` prints `<EXPO_PROJECT>`; `grep -c <EXPO_PROJECT> app.json` → 2.
+From 1.3.0 on, every store build and every `eas update` use this one project. Phones on 1.2.x keep listening to the
+project their binary has (OTA-PLAN.md §0) until they update from the store.
 
-The app already handles these links (`App.js` → `growth/inviteLinks.js`), so no JS change is needed at build time.
+## 2. App links: `https://gettdc.pk/i/<code>`, `/r/<link>`, `/c/<id>` open the app
 
-Note: the existing Android intent filter for `the-deft-crew-production.up.railway.app` has `autoVerify: true`, but the
-server serves no `/.well-known/assetlinks.json`, so that verification fails today (links open a chooser or the
-browser). Fix with the same file on the server, or drop that filter, in this build.
+Needs gettdc.pk served by Vercel (owner, DNS).
 
-### Vercel preview check for `vercel.json` (owner, before the portal goes to production)
+a. `edu-boost/public/.well-known/assetlinks.json`: replace `REPLACE_WITH_PLAY_APP_SIGNING_SHA256_BEFORE_1.3.0` with
+   `<PLAY_SHA256>` (colon-separated, upper case, as the Play Console shows it).
+b. `edu-boost/public/.well-known/apple-app-site-association`: replace `REPLACE_WITH_APPLE_TEAM_ID` with
+   `<APPLE_TEAM_ID>`; the `components` list: `{ "/": "/i/*" }`, `{ "/": "/r/*" }`, `{ "/": "/c/*" }`.
+c. Deploy the portal; check: `curl -sI https://gettdc.pk/.well-known/assetlinks.json` and
+   `curl -sI https://gettdc.pk/.well-known/apple-app-site-association` → 200, `content-type: application/json`.
+d. `app.json` android `intentFilters`: add (keep the existing ones)
+   ```json
+   { "action": "VIEW", "autoVerify": true, "category": ["BROWSABLE", "DEFAULT"],
+     "data": [{ "scheme": "https", "host": "gettdc.pk", "pathPrefix": "/i/" },
+              { "scheme": "https", "host": "gettdc.pk", "pathPrefix": "/r/" },
+              { "scheme": "https", "host": "gettdc.pk", "pathPrefix": "/c/" }] }
+   ```
+   and drop `autoVerify` on the old `the-deft-crew-production.up.railway.app` filter (that host serves no
+   assetlinks.json, so its verification always fails). ios: `"associatedDomains": ["applinks:gettdc.pk"]` (EAS enables
+   the capability on the app id).
+e. App (`App.js` ExternalDeepLink): `/i/<code>` is handled already (growth/inviteLinks.js). Add `https://gettdc.pk/c/<id>`
+   → the same handler as `tdcapp://confession/<id>`; `/r/<link>` → open it in the browser (a public resume is a page).
+f. Check after the build: Android `adb shell pm verify-app-links --re-verify com.aqkhan110.tdc`, then
+   `adb shell pm get-app-links com.aqkhan110.tdc` → `gettdc.pk: verified`; iPhone: a gettdc.pk/i/ link pasted in Notes
+   opens the app.
 
-`edu-boost/vercel.json` is new (P1): before it, the portal had no Vercel config at all. It adds two rewrites (the
-invite page, and an SPA fallback for every path without a dot) and two headers. Deploy the `upgrade/p1-followups`
-branch (or later) as a **preview**, then on the preview URL (`<preview>` below), in a private window:
+## 3. Play install referrer (P1-3, approved)
 
-| # | Open | Expect |
-|---|------|--------|
-| 1 | `<preview>/` | the landing page, as on gettdc.pk today |
-| 2 | `<preview>/ambassador` (type it, then reload) | the ambassador page, not a 404 and not the landing page |
-| 3 | `<preview>/privacy`, `/universities`, `/founder`: reload each | the same page after the reload |
-| 4 | `<preview>/admin`: sign in, open any admin page, reload | still signed in on the same admin page |
-| 5 | `<preview>/admin/users/student/<any id>`: reload | the admin user page (a deep path with several parts) |
-| 6 | `<preview>/some-page-that-does-not-exist` | the landing page (the app's own `*` route), not a Vercel 404 |
-| 7 | `<preview>/i/ABC123` | the small invite page (no React spinner, loads instantly), code `ABC123`, "your friend invited you to tdc" |
-| 8 | `<preview>/i/<a real student code>?c=wa` | **before** the P1 server is in production: the page works, the title stays "your friend invited you to tdc" (the open call gets a 404 and is ignored). **After**: the title shows the inviter's first name and the open is logged (channel wa) |
-| 9 | `<preview>/i/index.html?code=ABC123` | the same invite page, code `ABC123` (the fallback when the rewrite is not used) |
-| 10 | On an Android phone: the Play button on #8 | Play Store opens the tdc page (the referrer is used from 1.3.0 on) |
-| 11 | On an iPhone: "copy code & get the app" on #8 | the code is copied, the App Store opens on the tdc page (`apps.apple.com/app/id6765877675`) |
-| 12 | `curl -sI <preview>/i/ABC123` | `x-robots-tag: noindex, nofollow` and `cache-control: public, max-age=300` |
-| 13 | `curl -sI <preview>/` | **no** `x-robots-tag` (the landing page must stay indexable) |
-| 14 | `curl -sI <preview>/.well-known/assetlinks.json` | 200, `content-type: application/json` |
-| 15 | `curl -sI <preview>/.well-known/apple-app-site-association` | 200, `content-type: application/json` (no `.json` in the name: `vercel.json` sets it) |
-| 16 | `<preview>/manifest.json`, `<preview>/favicon.ico`, and the page's `/static/js/main.*.js` (DevTools → Network) | served as files (200, the right type), **not** the HTML of index.html |
-| 17 | `<preview>/robots.txt` and `<preview>/press/express-tribune.jpg` | the same files as on gettdc.pk today (text / image), not index.html |
-| 18 | `<preview>/i/` (no code) | the invite page without a code (just "get the app"), no error |
+`npx expo install react-native-google-play-install-referrer`. In `App.js`, after the splash, first launch only, guarded
+(`try { require(...) } catch {}`): read the referrer; if it holds `ref=<CODE>` (the invite page's Play button adds
+`referrer=ref%3D<CODE>`), save it as `@tdc_pending_ref` (the key invite links use), so Signup fills it in.
+Check: install from a Play internal-track link with `&referrer=ref%3DTEST12`, open → signup shows TEST12.
 
-The invite page always calls the production server (a preview may add `?api=https://tdc-server-staging.up.railway.app`
-once staging exists); Vercel previews are allowed by the server's CORS list (`config/corsOrigins.js`).
+## 4. Rate-us ask (P5-8, approved: expo-store-review), flag `rateAsk` (off)
 
-Any row failing: don't promote; tell me which row. Rollback after promotion = redeploy the previous production
-deployment in Vercel (Deployments → … → Promote), which has no `vercel.json`.
+`npx expo install expo-store-review`. Server: add `rateAsk: { default: false, client: true, grant: { roles: ["student"],
+label: "Rate-us ask" } }` to `config/featureFlags.js` (+ the feature-access counts). App `app/src/lib/rateAsk.js`: once
+per install, after a celebration closes (CelebrationPopup `onClosed`), when the flag is on, the account is 7+ days old
+and `StoreReview.isAvailableAsync()` is true: `StoreReview.requestReview()`, then `@tdc_rate_asked`. Never after an
+error, a refusal or a payment. The stores decide whether the sheet shows.
 
-Note: the two `.well-known` files hold placeholders until the values above are filled in; #14/#15 only check that they
-are served correctly, which is all the portal deploy needs. Android/iOS verification happens with the 1.3.0 build.
+## 5. Sentry (approved: @sentry/react-native)
 
-## 2. Play install referrer (P1-3, approved package)
+`npx expo install @sentry/react-native`; `app.json` plugins: `["@sentry/react-native/expo", { "organization": "<sentry
+org>", "project": "<sentry project>" }]`. EAS secrets (owner): `eas secret:create --name SENTRY_DSN` and
+`--name SENTRY_AUTH_TOKEN` (source maps). `App.js`, before anything else: `Sentry.init({ dsn, tracesSampleRate: 0.1,
+sendDefaultPii: false, beforeSend: scrub })`, `scrub` = `lib/safeConsole.js`'s `safeArg` over extra and breadcrumbs.
+`utils/reportError.js` forwards to `Sentry.captureException` (the console path stays as fallback).
+Check: a test build throws once from a hidden dev action → the event shows in Sentry without tokens or bodies.
 
-`react-native-google-play-install-referrer`. On the first launch only: read the referrer; if it holds `ref=<CODE>`
-(the invite page's Play button adds `referrer=ref%3D<CODE>…`), save it as `@tdc_pending_ref` (the same key the
-invite links use), so Signup fills it in. Guard: if the module is missing (an older binary), do nothing.
+## 6. Android minify + shrink (Q-3h): internal track first
 
-## 3. Others already approved for this build
+`app.json` → `expo-build-properties` (installed): `android.enableProguardInReleaseBuilds: true`,
+`android.enableShrinkResourcesInReleaseBuilds: true`; `android.extraProguardRules` only if a library breaks:
+`-keep class com.stripe.** { *; }`, `-keep class org.webrtc.** { *; }`, `-keep class com.facebook.** { *; }`.
 
-- `@sentry/react-native` (P0-5 option A): replace the body of `app/src/utils/reportError.js`.
-- `expo-store-review` (P5-8).
+## 7. Build, internal track, then release
 
-## 3b. Part 2 prep (owner, 25 Nov 2026): exact changes, ready to apply when the owner says "build 1.3.0"
+1. `npx expo export -p android -p ios` (must pass), all app tests (`node tests/run-all.js app`, lint included).
+2. `eas build --platform all --profile production` (owner runs it).
+3. Android: Play **internal testing** first. Test: sign in (email + Google), pay (Stripe test card), a voice / video
+   call, a push tap, the Meta events (Events Manager → Test events), a PDF download, image upload, the crew screen, the
+   three app links (step 2f), the install referrer (step 3). Compare the download size with 1.2.2 (Play Console → App
+   bundle explorer; PERF-BASELINE.md row).
+4. iOS: TestFlight, the same list (no referrer).
+5. Then production, staged (Play: 20 % → 100 %; App Store: phased release).
+6. After release: OTA for 1.3.0 goes to `<EXPO_PROJECT>` only (OTA-PLAN.md, channel `production`, runtime 1.3.0).
 
-Not committed as code on purpose: every item below changes `app.json` (which carries the owner's own uncommitted
-edit, never staged by the developer) and/or adds a native module that phones on the current binary don't have
-(release/r6 can reach them over the air, so it must not import these). Apply them on a `release/1.3.0` branch,
-together, then build. Each JS call is guarded (`try { require(...) } catch {}` + the module present), so the same JS
-also runs safely on an older binary.
-
-**a. App links, all three paths (P1 /i/, P3d /r/, P4c /c/).** `gettdc.pk` must be on Vercel first (owner, DNS).
-- `edu-boost/public/.well-known/assetlinks.json`: the Play App Signing SHA-256 (Play Console → App integrity).
-- `edu-boost/public/.well-known/apple-app-site-association`: the Apple Team ID; `components` gains
-  `{ "/": "/r/*" }` and `{ "/": "/c/*" }` next to `/i/*`.
-- `app.json` android `intentFilters`: one `VIEW` filter, `autoVerify: true`, scheme `https`, host `gettdc.pk`,
-  pathPrefix `/i/`, `/r/`, `/c/`. ios `associatedDomains`: `applinks:gettdc.pk`.
-- App: `App.js` ExternalDeepLink already handles `/i/<code>` (inviteLinks) and `tdcapp://confession/<id>`; add
-  `https://gettdc.pk/c/<id>` → the confession (the same handler as `tdcapp://confession/<id>`), and `/r/<link>` →
-  open the page in the browser (a public resume is a web page).
-- Check: `adb shell pm verify-app-links --re-verify com.aqkhan110.tdc` then `pm get-app-links` shows `verified`;
-  on iOS, a link pasted in Notes opens the app.
-
-**b. Play install referrer** (section 2): `npx expo install react-native-google-play-install-referrer`; the first-launch
-read in `App.js` after the splash, guarded.
-
-**c. Rate-us ask (P5-8), flag `rateAsk` (add to the server's flags, off).** `npx expo install expo-store-review`.
-`app/src/lib/rateAsk.js`: once per install, after a celebration closes (CelebrationPopup's `onClosed`), when the flag
-is on, `StoreReview.isAvailableAsync()` is true and the account is 7+ days old: `StoreReview.requestReview()`, then
-remember it (`@tdc_rate_asked`). Never after an error, a refusal or a payment. Apple / Google decide whether the
-sheet actually shows; nothing to count or claim.
-
-**d. Sentry (crash-free ≥ 99.5 %, plan Q-1).** `npx expo install @sentry/react-native`; `app.json` plugin
-`["@sentry/react-native/expo", { "organization": "<org>", "project": "<project>" }]`; the DSN as an EAS secret
-(`SENTRY_DSN`, never in the repo); `Sentry.init({ dsn, tracesSampleRate: 0.1, sendDefaultPii: false,
-beforeSend: scrub })` in `App.js` before anything else, where `scrub` reuses `lib/safeConsole.js`'s `safeArg` on the
-event's extra / breadcrumbs (no tokens, passwords or request bodies). `utils/reportError.js` then forwards to
-`Sentry.captureException` (its current console path stays as the fallback). Source maps upload in the EAS build
-(the plugin does it; `SENTRY_AUTH_TOKEN` as an EAS secret).
-
-**e. Android minify + shrink (Q-3h), internal track only first.** `app.json` → `expo-build-properties` (installed):
-`android.enableProguardInReleaseBuilds: true`, `android.enableShrinkResourcesInReleaseBuilds: true`. Keep rules if a
-library breaks (add to `android.extraProguardRules`): Stripe (`-keep class com.stripe.** { *; }`), WebRTC
-(`-keep class org.webrtc.** { *; }`), Facebook SDK (`-keep class com.facebook.** { *; }`). Internal-track test before
-any release: sign in (email + Google), pay (Stripe test card), a voice / video call, a push tap, the Meta events
-(Events Manager → Test events), a PDF download, image upload. Compare the download size with 1.2.x (Play Console →
-App bundle explorer); PERF-BASELINE.md has the row.
-
-**f. Tablet:** `supportsTablet` stays `true` (owner); the centred layout ships over the air (flag `tabletLayout`).
-
-## 4. Version
-
-`app.json` version **1.3.0** (runtimeVersion = appVersion: a new runtime; over-the-air updates for 1.2.2 continue
-separately), build number / versionCode +1.
+Rollback: Play → halt the rollout; App Store → pause the phased release; phones on 1.2.x are untouched.
