@@ -59,6 +59,7 @@ import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLaye
 import PushAskHost from "./app/src/push/PushAskHost";
 import LowDataImagesHost from "./app/src/lib/lowDataImages"; // Q-3i (flag lowDataImages)
 import QueryPersistHost from "./app/src/lib/persistedQueries"; // Q-3c (flag persistCache)
+import TabletFrame from "./app/src/ui/TabletFrame"; // Q-4 (flag tabletLayout)
 import AmbassadorInviteHost from "./app/src/crew/AmbassadorInviteHost";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
 
@@ -379,9 +380,12 @@ function AppContent() {
         <ChatProvider>
           <StatusBar barStyle="light-content" backgroundColor="#000000" />
           <View style={{ flex: 1 }}>
-            <NavigationContainer ref={navigationRef} theme={MyTheme}>
-              <AppNavigator />
-            </NavigationContainer>
+            {/* Q-4 (tabletLayout, off): on a tablet, a centred column of at most 600 pt; phones: no extra view */}
+            <TabletFrame>
+              <NavigationContainer ref={navigationRef} theme={MyTheme}>
+                <AppNavigator />
+              </NavigationContainer>
+            </TabletFrame>
 
             {/* Banner layer — mounted AFTER NavigationContainer so
                 navigationRef is always ready when a notification arrives */}
