@@ -800,6 +800,26 @@ Everything new is behind a flag, all off. Flag off = today's behaviour (checked 
   template takes a photo, and one-page depends on the student's content. These filters would show nothing or
   everything, which the owner's backlog note anticipated ("once such templates exist").
 
+## Final status after r7 (25 Nov 2026; release/r7 on main in all three repos)
+
+"Built" = the code is written, tested and on main, with every new feature behind a flag that is off. Switching a
+flag on is a separate owner step (`FLAG-ROLLOUT.md`).
+
+| Phase | Built | Left, and why |
+|---|---|---|
+| P0 safety basics | 100% | P0-6 (paused / banned accounts) stays off until the owner runs `scripts/count-account-status.js`. Sentry (P0-5) ships in the 1.3.0 store build. |
+| P1 growth loop | ~95% | The install referrer and the gettdc.pk app links (/i, /r, /c) need the 1.3.0 native build: Play SHA-256 and Apple Team ID from the owner. |
+| Phase N notifications | 100% | Flags off until the rollout. |
+| Phase A admin team access | 100% | A-5 scopes (per university / city) are optional in the plan and not built. |
+| P2 ambassador | 100% | Flags off until the rollout. |
+| P3 resume | ~97% | (1) "next" pinned above the keyboard: needs a phone or emulator, goes with the keyboard migration. (2) Gallery filters photo / two-column / one-page: no such templates exist (all single-column, every one takes a photo, one page depends on content); owner decision. Before switch-on: the owner's design approval (`resumeTemplatesV2`). |
+| P4 confessions | ~98% | `/c/<id>` opening the app directly: 1.3.0 build. Before switch-on: the handle word-list approval (`confessionHandles`), the Railway variables `SAFETY_ALERT_EMAILS` and `SAFETY_APPEAL_EMAIL`, and the helpline call-tests. |
+| P5 polish | ~95% | P5-8 rate-us needs `expo-store-review` (1.3.0 build). |
+| Q quality | ~90% | The keyboard migration (27 screens) and running the 8 Maestro flows need an emulator or phone. |
+
+Waiting on the owner: store versions for the OTA plan; the gettdc.pk DNS switch, then a re-check; Play SHA-256 and
+Apple Team ID; an emulator; the handle word-list and template design approvals; the Railway safety variables.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
