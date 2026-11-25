@@ -729,6 +729,15 @@ Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an 
 
 Not changed (owner to decide): the confession composer and card (older than the upgrade) have a11y gaps: no label on the text box, the photo-remove and post buttons, the plain share button; no role on the visibility chips and "show more"; card action buttons about 32 pt; no text-size cap. Fixing them changes the flag-off output that confessions-v2 requires to stay identical (and a cap is visible at large font sizes). The fix is ready to apply (labels, roles, 6 pt hit slop, caps) once the owner agrees.
 
+## P5c: first minutes (branch `upgrade/p5c-first-minutes` from `upgrade/p5b-polish`; SERVER `upgrade/p5c-server` from `upgrade/p5b-server`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| server | flags `onboardingGoals`, `homeNextAction` (grantable 43, student view 42). `POST /api/engagement/goals` (1-2 of save_money / internship / meet_people / resume; a repeat or unknown → 400) on the new optional `EngagementProfile.goals`; `GET /home` then puts the goals' mission cards first and picks "next" from them (same shape; flag off or no goals = the old order). `GET /api/engagement/next-action`: finish your resume (< 80, real completion) · claim a deal (never claimed) · today's drop (live, not answered) · invite a friend (0 referrals), else null. The ambassador invite keeps its own moment (AmbassadorInviteHost), not repeated | SERVER `697a50a0` | engagement-goals 23/23; all 117 suites |
+| app | `NextActionCard` (a MissionCard with the server's line; refreshes with Home), `GoalsSheet` (once: 3 cards "deals near you / get hired / your campus", then pick up to 2; "later" remembers on the phone) | APP `1577f8b` | p5c-first-minutes 14/14 |
+
+Note: the goals sheet shows to any signed-in student without goals (not only brand-new accounts) while the flag is on.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
