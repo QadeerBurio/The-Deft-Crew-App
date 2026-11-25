@@ -765,6 +765,41 @@ owner's emulator / Maestro setup is ready.
   reports `goalsAsked`. Old r6 apps are unaffected (they read `goals`).
 - **HelpCenter**: gettdc.pk has no help / FAQ / support page, so it keeps thedeftcrew.com (owner's rule).
 
+## r7: finish P3, P4, P5 to built (owner, 25 Nov 2026; branch `upgrade/r7-finish` from `main` in all three repos)
+
+Everything new is behind a flag, all off. Flag off = today's behaviour (checked in each suite).
+
+- **Resume templates (`resumeTemplatesV2`, off).** The 10 new templates are approved in the app and selectable
+  once the flag is on; the flag waits for the owner's design sign-off. Each passes the real-PDF ATS test and the new
+  one-page test (the fresher sample prints on exactly one A4 page). The five older ones are reported, not required:
+  Modern, Classic, Minimal and Executive need 2 pages for that sample; Compact needs 1. Admin → features → "Resume
+  template studio" tab: hide any single template without an app update (`GET/PUT /api/admin/resume-settings`,
+  `features.manage`, logged). The app reads `GET /api/resume/templates/hidden`; a student's applied template stays listed.
+- **Confession handles (`confessionHandles`, off; separate from `confessionsV2`).** Off: everyone is "anon.", also
+  earlier handle posts in the feed. On: the reviewed word list (chhota / bara removed). Admin → Safety → settings:
+  "words blocked from confession handles" (no app update). A handle with a blocked word shows "anon." at once, and
+  that student gets a new handle on their next post. Feed rows never carry the author.
+- **Appeal from a confession ban** (P4-1; `confessionSafety`): the "couldn't post" alert gets an "appeal" button
+  (mailto, the server's `SAFETY_APPEAL_EMAIL`) on posts and comments; without the variable, the sentence alone, as before.
+  Sign-in already had it for paused accounts.
+- **Live pre-check hint** (P4-4; `confessionSafety` + `confessionsV2`): phone numbers, e-mails, CNIC and links are
+  flagged while typing, with the server's own sentences, in the composer's "edit to post" box. Names stay
+  server-only (the list of students' names never comes to the phone). The server still checks every post.
+- **Voting (`confessionsVoting`, off; P4-3)**: up / down arrows without counts, used only for auto-hide. A post
+  with at least 10 down votes and at least 2x as many down as up becomes "hidden by down votes" and goes into the
+  Safety "held" queue. An admin's approve is final; no arrows on your own post; voters and counts are never sent.
+- **Heading icons** (P3 customisation; studio switch, off by default): small vector icons in the heading colour.
+  Real-PDF check: the same PDF text and page count as without icons, for all 15 templates. Without the switch
+  every resume is byte-identical to before.
+- **Cover letter + LinkedIn (`resumeWriter`, off; P3-9)**: from the resume (+ the job the student types), English
+  only, every paragraph checked with the Resume Studio validator (first person allowed). When the AI is
+  unavailable or too little is supported, nothing is written and the screen says "try again". The letter is editable,
+  then copied or saved as a PDF in the resume's own design (shared renderer `renderCoverLetterHTML`). New route
+  `ResumeWriter` (dashboard button, both flags). Nothing is stored.
+- **Gallery filters (photo / two-column / one-page): not built.** Every layout is single-column (ATS), every
+  template takes a photo, and one-page depends on the student's content. These filters would show nothing or
+  everything, which the owner's backlog note anticipated ("once such templates exist").
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
