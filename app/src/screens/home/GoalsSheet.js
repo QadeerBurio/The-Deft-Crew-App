@@ -1,7 +1,7 @@
 // screens/home/GoalsSheet.js — P5-1 "first 60 seconds" (flag onboardingGoals, off by default).
 // Once, for a signed-in student who hasn't picked goals: three cards on what tdc does for them, then "pick up to 2"
 // (save money / find an internship / meet people / build my resume) → POST /api/engagement/goals; Home's missions then
-// put the matching cards first (the server orders them). "later" hides it on this phone for good.
+// put the matching cards first (the server orders them). Shown once only (owner): "skip", done or closing it, and it never comes back.
 import React, { useContext, useEffect, useState } from "react";
 import { Text, View, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -44,24 +44,36 @@ export default function GoalsSheet() {
     AsyncStorage.getItem(LATER_KEY(uid)).then((v) => setLater(v === "1")).catch(() => setLater(false));
   }, [uid]);
 
-  // the server's answer: goals [] = never picked (the field comes only with the flag on)
-  const { data: goals } = useQuery({
+  // the server's answer (only with the flag on): goals, and goalsAsked = the sheet was shown once already
+  const { data } = useQuery({
     queryKey: GOALS_KEY,
-    queryFn: async () => (await api.get("/engagement/home")).data?.goals,
+    queryFn: async () => { const d = (await api.get("/engagement/home")).data || {}; return { goals: d.goals, asked: d.goalsAsked }; },
     enabled: on && !!uid,
     staleTime: 5 * 60_000,
     retry: 0,
   });
-  const visible = on && !!uid && later === false && Array.isArray(goals) && goals.length === 0;
+  // owner (25 Nov 2026): shown once only. It opens when never asked and no goals; from then on it stays open until
+  // "skip" / done / closed, and the server records it as asked at once (also on this phone, in case that fails)
+  const eligible = on && !!uid && later === false && !!data && data.asked !== true && Array.isArray(data.goals) && data.goals.length === 0;
+  const [open, setOpen] = useState(false);
+  const [closed, setClosed] = useState(false);
+  useEffect(() => {
+    if (!eligible || open || closed) return;
+    setOpen(true);
+    AsyncStorage.setItem(LATER_KEY(uid), "1").catch(() => {});
+    api.post("/engagement/goals", { asked: true }).catch(() => {});
+  }, [eligible, open, closed, uid]);
+  const visible = open && !closed;
 
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length >= 2 ? p : [...p, id]));
-  const dismiss = () => { setLater(true); AsyncStorage.setItem(LATER_KEY(uid), "1").catch(() => {}); };
+  const dismiss = () => { setClosed(true); setLater(true); };
   const save = async () => {
     if (busy || !picked.length) return;
     setBusy(true); setError("");
     try {
       await api.post("/engagement/goals", { goals: picked });
-      queryClient.setQueryData(GOALS_KEY, picked);
+      queryClient.setQueryData(GOALS_KEY, { goals: picked, asked: true });
+      setClosed(true);
       queryClient.invalidateQueries({ queryKey: ["engagement"] }); // Home's missions follow the goals
     } catch (e) {
       setError(plainError(e, "couldn't save that. try again."));
@@ -101,7 +113,7 @@ export default function GoalsSheet() {
           {!!error && <Text style={s.error} maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLiveRegion="polite">{error}</Text>}
         </>
       )}
-      <Button title="later" variant="ghost" onPress={dismiss} accessibilityLabel="later, don't ask again" />
+      <Button title="skip" variant="ghost" onPress={dismiss} accessibilityLabel="skip, don't ask again" />
     </Sheet>
   );
 }

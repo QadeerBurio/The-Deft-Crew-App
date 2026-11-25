@@ -750,6 +750,21 @@ Not done in Q-d: the keyboard migration (27 KeyboardAvoidingView screens → Key
 form moves with the keyboard and needs a phone to check (no emulator on the developer's machine yet): next, once the
 owner's emulator / Maestro setup is ready.
 
+## Part 2 follow-ups (owner, 25 Nov 2026; branch `upgrade/r6-followups` from `release/r6` in app and server)
+
+- **Confession accessibility, for everyone** (owner: yes): the composer and card gain labels (text box, photo
+  remove, post, share), roles (visibility chips as radio, "show more"), states, 6-8 pt hit slop (chips, card actions,
+  photo remove), the 1.3 text cap on every Text, and two styles (photo-remove 44 pt, post minHeight 44).
+  **Baseline updated deliberately:** confessions-v2's "identical to before" comparisons (flag off vs c4a6416; flags
+  off vs before P4a) now compare with exactly those accessibility props removed from both sides (`deA11y`, a named
+  list + the two styles); any other difference still fails (checked: changing the composer title fails 5 checks).
+  The fix itself is checked positively in a11y-pilot (the confession files are back in its list) and p5b-polish.
+- **Goals sheet, shown once only** (owner): it opens when the student was never asked and has no goals, records
+  `goalsAskedAt` on the server at once (`POST /api/engagement/goals { asked: true }`, also on the phone in case
+  that fails), and never shows again after "skip", completing it, or closing the app without answering; `/home`
+  reports `goalsAsked`. Old r6 apps are unaffected (they read `goals`).
+- **HelpCenter**: gettdc.pk has no help / FAQ / support page, so it keeps thedeftcrew.com (owner's rule).
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |

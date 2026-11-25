@@ -1,7 +1,7 @@
 // P5c (flags off by default):
 //   homeNextAction: one mission-style card at the top of Home from GET /engagement/next-action; nothing → nothing
 //   onboardingGoals: once, for a student without goals: 3 "what tdc does" cards, then pick up to 2 goals →
-//     POST /engagement/goals and Home's engagement data refreshes; "later" hides it on this phone for good
+//     POST /engagement/goals and Home's engagement data refreshes; shown once only (owner): "skip", done or closed, never again
 // Real NextActionCard / GoalsSheet; api, flags, account, phone storage and React Query are small fakes.
 //   node tests/app/p5c-first-minutes.test.js
 const path = require("path");
@@ -13,10 +13,10 @@ global.__DEV__ = false;
   const { React, mount } = H.makeReact();
   const { rn } = H.makeRN();
   const flags = { homeNextAction: false, onboardingGoals: false };
-  const calls = []; let action = null; let goals = []; const invalidated = []; const store = new Map();
+  const calls = []; let action = null; let goals = []; let asked = false; const invalidated = []; const store = new Map();
   const api = {
-    get: async (url) => { calls.push(["GET", url]); if (url === "/engagement/next-action") return { data: { action } }; if (url === "/engagement/home") return { data: { goals } }; return { data: {} }; },
-    post: async (url, body) => { calls.push(["POST", url, body]); return { data: { goals: body.goals } }; },
+    get: async (url) => { calls.push(["GET", url]); if (url === "/engagement/next-action") return { data: { action } }; if (url === "/engagement/home") return { data: { goals, goalsAsked: asked || goals.length > 0 } }; return { data: {} }; },
+    post: async (url, body) => { calls.push(["POST", url, body]); if (body.asked) asked = true; return { data: body.asked ? { asked: true } : { goals: body.goals } }; },
   };
   // React Query stand-in: runs queryFn once when enabled
   const rq = {
@@ -74,7 +74,7 @@ global.__DEV__ = false;
   goals = [];
   m = mount(React.createElement(Gs.default));
   await H.tick(10);
-  ok(m.tree?.type === "Sheet" && m.tree.props.title === "what tdc does for you" && /deals near you/.test(text(m.tree)) && /get hired/.test(text(m.tree)) && /your campus/.test(text(m.tree)), "no goals yet: the sheet, three cards first", text(m.tree));
+  ok(calls.some((c) => c[0] === "POST" && c[2]?.asked === true) && m.tree?.type === "Sheet" && m.tree.props.title === "what tdc does for you" && /deals near you/.test(text(m.tree)) && /get hired/.test(text(m.tree)) && /your campus/.test(text(m.tree)), "never asked, no goals: the sheet (recorded as asked at once), three cards first", text(m.tree));
   H.find(m.tree, (n) => n.type === "Button" && n.props.title === "next").props.onPress();
   await H.tick(5);
   ok(m.tree.props.title === "what do you want from tdc?" && H.find(m.tree, (n) => n.type === "Button" && n.props.title === "done").props.disabled === true, "'next' → pick your goals; 'done' waits for one");
@@ -86,18 +86,38 @@ global.__DEV__ = false;
   goals = ["meet_people", "internship"];
   H.find(m.tree, (n) => n.type === "Button" && n.props.title === "done").props.onPress();
   await H.tick(10);
-  ok(JSON.stringify(calls.find((c) => c[0] === "POST")) === '["POST","/engagement/goals",{"goals":["meet_people","internship"]}]' && invalidated.some((k) => k.join() === "engagement"), "'done' → POST /engagement/goals and Home's engagement data refreshes");
+  ok(JSON.stringify(calls.filter((c) => c[0] === "POST").pop()) === '["POST","/engagement/goals",{"goals":["meet_people","internship"]}]' && invalidated.some((k) => k.join() === "engagement") && m.tree == null, "'done' → POST /engagement/goals, Home's engagement data refreshes, the sheet closes");
   m.unmount();
-  goals = [];
+  // owner: shown once only, with "skip"; never again after skip or completion
   m = mount(React.createElement(Gs.default));
   await H.tick(10);
-  H.find(m.tree, (n) => n.type === "Button" && n.props.title === "later").props.onPress();
+  ok(m.tree == null, "after completing: never shown again");
+  m.unmount();
+  goals = []; asked = false; store.clear(); calls.length = 0; account.user = { _id: "u2" };
+  m = mount(React.createElement(Gs.default));
+  await H.tick(10);
+  ok(m.tree?.type === "Sheet" && calls.some((c) => c[0] === "POST" && c[2]?.asked === true), "another student, never asked: shown, recorded as asked");
+  H.find(m.tree, (n) => n.type === "Button" && n.props.title === "skip").props.onPress();
   await H.tick(5);
-  ok(m.tree == null && store.get(Gs.LATER_KEY("u1")) === "1", "'later' closes it and remembers on this phone");
+  ok(m.tree == null && store.get(Gs.LATER_KEY("u2")) === "1", "'skip' closes it (remembered on this phone too)");
   m.unmount();
   m = mount(React.createElement(Gs.default));
   await H.tick(10);
-  ok(m.tree == null, "…not asked again");
+  ok(m.tree == null, "…never shown again");
+  m.unmount();
+  store.clear();
+  m = mount(React.createElement(Gs.default));
+  await H.tick(10);
+  ok(m.tree == null, "…not on another phone either (the server says it was asked)");
+  m.unmount();
+  goals = []; asked = false; store.clear(); account.user = { _id: "u3" };
+  m = mount(React.createElement(Gs.default));
+  await H.tick(10);
+  ok(m.tree?.type === "Sheet", "a third student: shown once (the app closed without an answer)…");
+  m.unmount();
+  m = mount(React.createElement(Gs.default));
+  await H.tick(10);
+  ok(m.tree == null, "…and not again: shown once only");
   m.unmount();
 
   const home = H.read("app/src/screens/Home.js");
