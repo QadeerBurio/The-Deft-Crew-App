@@ -87,7 +87,8 @@ function makeReact() {
   return { React, mount, renders, contexts };
 }
 
-function loader(mocks) {
+// opts.fallback(id): r8/r9 smoke renders only; a bare module id not in mocks → its stub (undefined = the real module)
+function loader(mocks, opts = {}) {
   const cache = new Map();
   const load = (file) => {
     if (cache.has(file)) return cache.get(file).exports;
@@ -102,8 +103,12 @@ function loader(mocks) {
       if (id.startsWith(".")) {
         const abs = path.resolve(path.dirname(file), id);
         for (const key of Object.keys(mocks)) if (key.startsWith("/") && abs.replace(/\\/g, "/").endsWith(key)) return mocks[key];
-        return load(require.resolve(abs.replace(/(\.js)?$/, ".js")));
+        if (/\.json$/.test(abs)) return JSON.parse(fs.readFileSync(abs, "utf8")); // data files
+        const asFile = abs.replace(/(\.js)?$/, ".js");
+        if (!fs.existsSync(asFile) && fs.existsSync(path.join(abs, "index.js"))) return load(path.join(abs, "index.js")); // a folder import (../ui)
+        return load(require.resolve(asFile));
       }
+      if (opts.fallback) { const stub = opts.fallback(id); if (stub !== undefined) return stub; }
       return reqApp(id);
     };
     cache.set(file, m); m._compile(code, file);
