@@ -19,7 +19,8 @@ The app part is JavaScript only (one approved JS package added: `@tanstack/query
 **For everyone, no flag (no visible change):** the four giant screens split into files (moved unchanged, checked
 line by line); the last remote pictures use the cached RemoteImage (job logo, Surprise Box photos, SkillShare
 profile photo, the chat's full-screen viewer); a guest can't upload SkillShare listing files (the global guard
-already refused them).
+already refused them); **the confession composer and card are accessible** (owner, for everyone: labels, roles,
+larger touch areas, the 1.3 text cap; text scaling stops at 1.3 for students with very large system fonts).
 
 **Behind flags (all off):**
 
@@ -33,7 +34,7 @@ already refused them).
 | `cityCheck` | "is your city right?" once on Home (old automatic Karachi) | server `POST /api/me/city` |
 | `polishEmptyStates` | empty confessions / resumes use the Dot empty state | — |
 | `celebrationsPlus` | "share it" on level up / cv ready; a confession's author hears at 10 likes | server |
-| `onboardingGoals` | 3 "what tdc does" cards + pick 2 goals; Home's missions follow them | server |
+| `onboardingGoals` | 3 "what tdc does" cards + pick 2 goals, shown once only ("skip"); Home's missions follow them | server |
 | `homeNextAction` | one "next step" card at the top of Home | server |
 | `nativeStackDrawer` | the home stack on the native stack (smoother transitions), from the next app start | — |
 | `tabletLayout` | on an iPad / tablet, a centred column of max 600 pt | — |
@@ -79,7 +80,5 @@ Nothing new. (The earlier list in `PROGRESS.md` still applies: `SUPER_ADMIN_IDS`
 ## (f) Known, not changed
 
 - The keyboard migration (27 screens) waits for the emulator / phone checks.
-- The older confession composer / card have accessibility gaps (labels, roles, sizes, text cap): fixing them
-  changes the flag-off output; owner to decide (`PROGRESS.md`).
-- `HelpCenter.js` opens the website `thedeftcrew.com` (a link): owner to decide.
+- `HelpCenter.js` keeps `thedeftcrew.com` (gettdc.pk has no help page; owner's rule).
 - gettdc.pk still points at Hostinger until the owner moves DNS (then re-check /i/, /r/, /c/, .well-known).
