@@ -738,6 +738,18 @@ Not changed (owner to decide): the confession composer and card (older than the 
 
 Note: the goals sheet shows to any signed-in student without goals (not only brand-new accounts) while the flag is on.
 
+## Q-d: navigation, and Q-4 tablet (branch `upgrade/qd-navigation` from `upgrade/p5c-first-minutes`; SERVER `upgrade/qd-flags` from `upgrade/p5c-server`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| native stack (Q-3a) | `@react-navigation/native-stack` explicit (7.19.0, already installed through expo-router; approved in Q-3a). The home stack's 65 screens render under the JS stack (exactly as before) or the native stack (fade, swipe back, paper), chosen once per app start from the flags known then (flag `nativeStackDrawer`). SkillShare / social stacks unchanged (one stack per release) | APP `928ddbc`, SERVER `b2efcb06` | qd-navigation 7/7; 6 suites that read the registrations accept `<HS.Screen>` |
+| tablet (Q-4) | owner: keep the iPad. `ui/TabletFrame.js`: on a window whose short side is 600 pt+, the navigator sits in a centred paper column of max 600 pt on sand (flag `tabletLayout`); phones / flag off: no extra view | APP `be4b9e0`, SERVER `c962914d` | tablet-frame 9/9 |
+| 1.3.0 prep | `release-1.3.0.md` §3b: app links for /i /r /c, install referrer, rate-us ask (flag rateAsk), Sentry (scrubbed with safeConsole), Proguard / shrink with keep rules and the internal-track test list. Documented, not code: each needs `app.json` (the owner's uncommitted edit) and / or a native module the OTA release must not import | APP `1ece9cf` | — |
+
+Not done in Q-d: the keyboard migration (27 KeyboardAvoidingView screens → KeyboardAwareScrollView). Each changes how a
+form moves with the keyboard and needs a phone to check (no emulator on the developer's machine yet): next, once the
+owner's emulator / Maestro setup is ready.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
