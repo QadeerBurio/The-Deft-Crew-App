@@ -17,7 +17,7 @@ import { PALETTES, FONT_PAIRS, SECTION_KEYS, MODEL_DEFAULT_COLOURS } from '../..
 import { funnel } from '../../../analytics/funnel';
 import TemplateThumb from './TemplateThumb';
 
-export const STUDIO_KEYS = ['palette', 'fontPair', 'size', 'density', 'margins', 'headingCase', 'headingStyle', 'sectionOrder', 'hiddenSections', 'headings', 'photo', 'dateFormat', 'pageSize', 'linkStyle', 'accentColor'];
+export const STUDIO_KEYS = ['palette', 'fontPair', 'size', 'density', 'margins', 'headingCase', 'headingStyle', 'sectionOrder', 'hiddenSections', 'headings', 'photo', 'dateFormat', 'pageSize', 'linkStyle', 'accentColor', 'headingIcons'];
 // the older colour keys can't be cleared (older apps send them); "no custom colour" = the model's defaults, which the
 // five always rendered with and the library templates read as "not chosen" (their own colours show)
 export const COLOUR_KEYS = ['headingColor', 'textColor'];
@@ -110,6 +110,10 @@ export default function CustomiseSheet({ visible, onClose, resume, templateId, u
           <Chip label="Aa" selected={draft.headingCase === 'title'} onPress={() => set({ headingCase: 'title' })} />
           {['rule', 'bar', 'underline', 'none'].map((v) => <Chip key={v} label={v} selected={draft.headingStyle === v} onPress={() => set({ headingStyle: v })} />)}
         </Row>
+        <View style={s.toggle}>
+          <Text style={s.toggleText} maxFontSizeMultiplier={M}>icons next to headings</Text>
+          <Switch value={draft.headingIcons === true} onValueChange={(on) => set({ headingIcons: on ? true : null })} accessibilityLabel="icons next to headings" trackColor={{ true: T.yellow, false: T.line }} thumbColor={T.white} />
+        </View>
         <Text style={s.label} maxFontSizeMultiplier={M}>sections</Text>
         {order.map((k, i) => (
           <View key={k} style={s.secRow}>
@@ -143,6 +147,8 @@ const s = StyleSheet.create({
   customRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 10 },
   msg: { fontFamily: F.bodyMedium, fontSize: 13, color: T.danger },
   secRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  toggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, minHeight: 44 },
+  toggleText: { fontFamily: F.body, fontSize: 14, color: T.ink, flex: 1 },
   arrow: { minWidth: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   hint: { fontFamily: F.body, fontSize: 12, color: T.textFaint, marginTop: 4 },
 });

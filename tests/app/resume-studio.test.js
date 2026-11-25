@@ -198,6 +198,34 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     ok(JSON.stringify(t.puts[0]?.[1]) === JSON.stringify({ customStyles: { palette: null, size: null, hiddenSections: null, headingColor: "#0F172A", textColor: "#334155" } }), "reset: null for each studio key, the colours back to the defaults (only what differs is sent)", JSON.stringify(t.puts));
     m.unmount();
   }
+  console.log("── r7: heading icons (studio switch; drawn on the resume; the real-PDF check is in resume-ats.test.js)");
+  {
+    const t = setup({ user: { profileImage: "" } });
+    const CS = t.load(path.join(H.SRC, "screens/Resume/studio/CustomiseSheet.js"));
+    const svc = t.load(path.join(H.SRC, "services/templateService.js"));
+    let m = t.mount(t.React.createElement(CS.default, { visible: true, onClose() {}, resume: RESUME, templateId: "campus", updateResume: async (id, ch) => { t.puts.push([id, ch]); } }));
+    await H.tick(2);
+    const sw = H.byLabel(m.tree, "icons next to headings");
+    ok(sw && sw.props.value === false, "off by default");
+    sw.props.onValueChange(true);
+    ok(H.find(m.tree, (n) => n.type === "Thumb").props.styles.headingIcons === true, "…on: the preview shows it at once");
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    ok(JSON.stringify(t.puts[0]?.[1]) === JSON.stringify({ customStyles: { headingIcons: true } }), "save: only headingIcons: true", JSON.stringify(t.puts));
+    m.unmount();
+    m = t.mount(t.React.createElement(CS.default, { visible: true, onClose() {}, resume: { ...RESUME, customStyles: { headingIcons: true } }, templateId: "campus", updateResume: async (id, ch) => { t.puts.push([id, ch]); } }));
+    await H.tick(2);
+    H.byLabel(m.tree, "icons next to headings").props.onValueChange(false);
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    ok(JSON.stringify(t.puts[1]?.[1]) === JSON.stringify({ customStyles: { headingIcons: null } }), "switched off: null (back to the template's look)", JSON.stringify(t.puts[1]));
+    m.unmount();
+    const plain = svc.renderResumeHTML(RESUME, "modern_ats");
+    ok(svc.renderResumeHTML(RESUME, "modern_ats", { headingIcons: false }) === plain && svc.renderResumeHTML(RESUME, "modern_ats", { headingIcons: null }) === plain && !plain.includes("<svg"), "off / null / missing: byte-identical to today (no icons)");
+    const icons = svc.renderResumeHTML(RESUME, "modern_ats", { headingIcons: true });
+    ok(/<h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true">/.test(icons) && icons.includes("h2 .hi {"), "on: an icon in each heading, in the heading's colour (currentColor)");
+  }
+
   console.log("── reset after a typed custom colour (owner: the template's own look, completely)");
   {
     const t = setup({ user: { profileImage: "" } });

@@ -45,6 +45,7 @@ const EXPERIENCED = {
   const norm = (s) => s.replace(/\s+/g, " ").replace(/[‐-―]/g, "-").toLowerCase();
   const results = {};
   const onePage = {}; // owner (25 Nov 2026): the one-page test, on the real PDF of the fresher sample
+  const plainText = {}; // the fresher PDF's text, to compare with heading icons on
   for (const id of ids) {
     let safe = true;
     const why = [];
@@ -55,6 +56,7 @@ const EXPERIENCED = {
       await page.pdf({ path: file, format: "A4", printBackground: true, preferCSSPageSize: true });
       if (label === "fresher") onePage[id] = (fs.readFileSync(file).toString("latin1").match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
       const text = norm(execFileSync(pdftotext, ["-enc", "UTF-8", file, "-"]).toString("utf8"));
+      if (label === "fresher") plainText[id] = text;
       // what must come out, in document order: name, contact, then each heading and each entry title as the HTML has them
       const expected = await page.evaluate(() => [...document.querySelectorAll("h1, .contact, h2, .entry .t")].map((e) => e.innerText.replace(/\s+/g, " ").trim()).filter(Boolean));
       let at = -1;
@@ -73,6 +75,21 @@ const EXPERIENCED = {
     if (old) ok((OLD_BADGES[id] === "safe") === safe, `${id} (older): ${safe ? "ATS-safe" : "not ATS-safe"}, as recorded`, why.join(" | "));
     else ok(safe, `${id}: ATS-safe (name, contact, every heading and entry in reading order, both resumes)`, why.join(" | "));
   }
+  // r7 heading icons (studio switch, off by default): vector drawings only, so the text an ATS reads and the page count
+  // are exactly the same as without them, for every template
+  const iconDiff = [];
+  for (const id of ids) {
+    const html = svc.renderResumeHTML(FRESHER_SAMPLE, id, { headingIcons: true });
+    if (!/<h2><svg class="hi"/.test(html)) { iconDiff.push(`${id}: no icons drawn`); continue; }
+    await page.setContent(html, { waitUntil: "load" });
+    const file = path.join(tmp, `${id}-icons.pdf`);
+    await page.pdf({ path: file, format: "A4", printBackground: true, preferCSSPageSize: true });
+    const pages = (fs.readFileSync(file).toString("latin1").match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+    const text = norm(execFileSync(pdftotext, ["-enc", "UTF-8", file, "-"]).toString("utf8"));
+    if (text !== plainText[id]) iconDiff.push(`${id}: text differs`);
+    if (pages !== onePage[id]) iconDiff.push(`${id}: ${onePage[id]} → ${pages} pages`);
+  }
+  ok(iconDiff.length === 0, `heading icons on: every template (${ids.length}) draws them, with the same PDF text and page count as without`, iconDiff.join(", "));
   await browser.close();
   // the 10 new templates (owner: each must pass it); the five older ones are reported, not required (today several
   // need two pages for this sample)
