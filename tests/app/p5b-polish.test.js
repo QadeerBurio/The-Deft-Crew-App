@@ -117,6 +117,42 @@ global.__DEV__ = false;
     ok(/<Dot mood="broke" size=\{56\} animated=\{false\} \/>/.test(H.read("app/src/screens/MyDiscountScreen.js")), "deals (my discounts) already had a Dot, one line and 'see brands' (unchanged)");
   }
 
+  // celebrations (celebrationsPlus): level up / "cv ready" get "share it" (the share card); then no auto-close
+  {
+    const { React: R3, mount: mount3 } = H.makeReact();
+    const { rn: rn3 } = H.makeRN();
+    rn3.Animated = { Value: function V() { this.setValue = () => {}; }, View: "Animated.View", timing: () => ({ start: (cb) => cb && cb() }), spring: () => ({ start: (cb) => cb && cb() }), parallel: () => ({ start: (cb) => cb && cb() }) };
+    let plus = false; const cards = [];
+    const loadP = H.loader({
+      react: R3, "react-native": rn3,
+      "./Dot": { __esModule: true, default: "Dot" },
+      "../utils/haptics": { pop() {}, success() {} },
+      "../../hooks/useFlag": { __esModule: true, default: () => plus },
+      "../../ui/ShareCard": { __esModule: true, default: (p) => { cards.push(p); return R3.createElement("ShareCardSheet", p); } },
+    });
+    const P = loadP(path.join(H.SRC, "engagement/components/CelebrationPopup.js"));
+    const realST = global.setTimeout; const timers = [];
+    // records the popup's 3 s auto-close (never run); every other timer (the harness's own waits) runs normally
+    global.setTimeout = (fn, ms, ...a) => { timers.push(ms); return ms === 3000 ? 1 : realST(fn, ms, ...a); };
+    const level = { kind: "tier_unlocked", mood: "hype", line: "you unlocked silver!", cta: { label: "view rewards" }, meta: { tierId: "silver" } };
+    ok(JSON.stringify(P.shareCardFor(level)) === '{"variant":"levelUp","data":{"level":"silver"}}' && P.shareCardFor({ kind: "badge", payload: { badgeId: "feature_resume" } })?.variant === "resumeReady" && P.shareCardFor({ kind: "badge", payload: { badgeId: "streak_7" } }) === null && P.shareCardFor({ kind: "confession_likes" }) === null, "shareable: level up (levelUp card with the level) and 'cv ready' (resumeReady); nothing else");
+    let m3 = mount3(R3.createElement(P.default, { popup: level, onClose() {}, onNotNow() {} }));
+    ok(!H.byLabel(m3.tree, "share it") && timers.includes(3000), "flag off: no share button, closes itself after 3 s (as before)");
+    m3.unmount(); timers.length = 0;
+    plus = true;
+    m3 = mount3(R3.createElement(P.default, { popup: { ...level, line: "you unlocked silver! " }, onClose() {}, onNotNow() {} }));
+    const sh = H.byLabel(m3.tree, "share it");
+    ok(sh && !timers.includes(3000), "flag on, level up: 'share it', and it stays until the student chooses");
+    sh.props.onPress();
+    await H.tick(5);
+    ok(cards.length >= 1 && cards.at(-1).variant === "levelUp" && cards.at(-1).data.level === "silver" && cards.at(-1).visible === true, "'share it' opens the level-up share card with the level", JSON.stringify(cards.at(-1)));
+    m3.unmount(); timers.length = 0;
+    m3 = mount3(R3.createElement(P.default, { popup: { kind: "confession_likes", mood: "excited", line: "10 people liked your confession.", cta: { label: "see it", route: "FeedScreen" } }, onClose() {}, onNotNow() {} }));
+    ok(/10 people liked your confession\./.test(text(m3.tree)) && /see it/.test(text(m3.tree)) && !H.byLabel(m3.tree, "share it") && timers.includes(3000), "the confession's 10-likes popup shows its line and 'see it' (no share: it stays anonymous)");
+    m3.unmount();
+    global.setTimeout = realST;
+  }
+
   // header search
   const dn = H.read("app/src/navigation/DrawerNavigator.js").replace(/\r\n/g, "\n");
   ok(/const headerSearchOn = useFlag\('headerSearch'\) === true;/.test(dn), "header: reads headerSearch");

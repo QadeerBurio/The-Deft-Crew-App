@@ -1,7 +1,8 @@
 // app/src/engagement/components/CelebrationPopup.js
 // Clean black card. Single popup. Auto-closes, then triggers onClosed.
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import useFlag from '../../hooks/useFlag'; // P5-3 (celebrationsPlus)
 import {
   Modal,
   Text,
@@ -22,7 +23,19 @@ const MUTED = '#8b8b8b';
 
 const AUTO_CLOSE_MS = 3000;
 
+// P5-3 (flag celebrationsPlus): which celebrations get a "share" button, and the share card it opens (ui/ShareCard)
+export function shareCardFor(popup) {
+  if (!popup) return null;
+  if (popup.kind === 'tier_unlocked') return { variant: 'levelUp', data: { level: popup.meta?.tierId || '' } };
+  if (popup.kind === 'badge' && popup.payload?.badgeId === 'feature_resume') return { variant: 'resumeReady', data: {} };
+  return null;
+}
+
 export default function CelebrationPopup({ popup, onClose, onNotNow, onClosed }) {
+  const plus = useFlag('celebrationsPlus') === true;
+  const share = plus ? shareCardFor(popup) : null;
+  const hasShare = !!share;
+  const [shareOpen, setShareOpen] = useState(false);
   const scale = useRef(new Animated.Value(0.92)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const firedRef = useRef(false);
@@ -90,15 +103,17 @@ export default function CelebrationPopup({ popup, onClose, onNotNow, onClosed })
       }),
     ]).start();
 
-    // Auto-close after delay
-    timerRef.current = setTimeout(() => {
-      handleClose(onNotNow || onClose);
-    }, AUTO_CLOSE_MS);
+    // Auto-close after delay (P5-3: not when it can be shared; then the student closes it)
+    if (!hasShare) {
+      timerRef.current = setTimeout(() => {
+        handleClose(onNotNow || onClose);
+      }, AUTO_CLOSE_MS);
+    }
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [popup, handleClose, onNotNow, onClose, scale, opacity]);
+  }, [popup, handleClose, onNotNow, onClose, scale, opacity, hasShare]);
 
   if (!popup) return null;
 
@@ -141,6 +156,18 @@ export default function CelebrationPopup({ popup, onClose, onNotNow, onClosed })
             <Text style={styles.ctaText}>{popup.cta?.label || 'ok'}</Text>
           </TouchableOpacity>
 
+          {hasShare && (
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={() => { if (timerRef.current) clearTimeout(timerRef.current); setShareOpen(true); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="share it"
+            >
+              <Text style={styles.notNowText}>share it</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.notNowBtn}
             onPress={handleNotNow}
@@ -150,6 +177,13 @@ export default function CelebrationPopup({ popup, onClose, onNotNow, onClosed })
           </TouchableOpacity>
         </Animated.View>
       </Pressable>
+      {/* P5-3: the share card, inside this modal (one modal on top of another works this way on iOS); loaded only now */}
+      {shareOpen && share && React.createElement(require('../../ui/ShareCard').default, {
+        visible: true,
+        variant: share.variant,
+        data: share.data,
+        onClose: () => { setShareOpen(false); handleClose(onClose); },
+      })}
     </Modal>
   );
 }
@@ -207,6 +241,13 @@ const styles = StyleSheet.create({
   notNowBtn: {
     marginTop: 12,
     paddingVertical: 8,
+  },
+  // P5-3: 44 pt to touch (P5-7)
+  shareBtn: {
+    marginTop: 12,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   notNowText: {
     fontSize: 13,
