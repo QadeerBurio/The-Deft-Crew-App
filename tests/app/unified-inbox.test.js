@@ -90,7 +90,7 @@ const server = [
   ok(r.writes.includes("delete https://srv/api/notification/delete/b2"), "deleting a bell item uses the bell endpoint");
 
   console.log("-- wiring");
-  const nav = H.read("app/src/navigation/DrawerNavigator.js");
+  const nav = H.read("app/src/navigation/DrawerNavigator.js").split("<HS.Screen").join("<Stack.Screen"); // Q-3a: the home stack's <HS.Screen> (JS or native stack, chosen at start) is the same registration
   ok(/const NotificationScreen = accountOnly\(NotificationsRouteBase, \{ title: "notifications" \}\);/.test(nav) && (nav.match(/<Stack\.Screen name="SocialNotifications" component=\{SocialNotificationScreen\} \/>/g) || []).length === 2, "'Notifications' → NotificationsRoute; 'SocialNotifications' in both stacks");
   ok(/"Notifications", "SocialNotifications"/.test(H.read("app/src/navigation/routes.js")), "routes.js knows SocialNotifications (navigateAnywhere)");
   const route = H.read("app/src/notifications/NotificationsRoute.js");

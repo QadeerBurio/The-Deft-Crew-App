@@ -445,7 +445,7 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
 
   // ═════ wiring ═════
   console.log("── wiring");
-  const drawer = read("app/src/navigation/DrawerNavigator.js");
+  const drawer = read("app/src/navigation/DrawerNavigator.js").split("<HS.Screen").join("<Stack.Screen"); // Q-3a: the home stack's <HS.Screen> (JS or native stack, chosen at start) is the same registration
   ok(/<Stack\.Screen name="JobDetails" component=\{JobDetails\} options=\{\{ gestureEnabled: true \}\} \/>/.test(drawer) && /<Stack\.Screen name="JobApplicationForm" component=\{JobApplicationForm\} options=\{\{ gestureEnabled: true \}\} \/>/.test(drawer) && drawer.indexOf('name="JobDetails"') > drawer.indexOf('name="Career"'), "both screens are registered next to the jobs list (iOS swipe back on)");
   ok(/const JobApplicationForm = accountOnly\(JobApplicationFormBase/.test(drawer) && /<Stack\.Screen name="ApplicationForm" component=\{ApplicationForm\} \/>/.test(drawer), "the form needs an account; the scholarship ApplicationForm is unchanged");
   ok(drawer.includes("  'JobDetails',\n  'JobApplicationForm',") && read("app/src/navigation/TabNavigator.js").includes('  "JobDetails",\n  "JobApplicationForm",'), "full screen (no tab bar or drawer header over the Apply bar)");

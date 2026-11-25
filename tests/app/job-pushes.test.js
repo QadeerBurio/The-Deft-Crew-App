@@ -191,7 +191,7 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
       mount(React.createElement(Redirect, { navigation: { replace: (r, p) => replaced.push([r, p]) }, route: { name, params } }));
       ok(replaced.length === 1 && replaced[0][0] === "Career" && JSON.stringify(replaced[0][1]) === JSON.stringify(want), `navigate("${name}", ${JSON.stringify(params)}) → Career ${JSON.stringify(want)}`, JSON.stringify(replaced));
     }
-    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    const drawer = read("app/src/navigation/DrawerNavigator.js").split("<HS.Screen").join("<Stack.Screen"); // Q-3a: the home stack's <HS.Screen> (JS or native stack, chosen at start) is the same registration
     ok(drawer.includes('<Stack.Screen name="TDCCareers" component={JobRouteRedirect} />') && drawer.includes('<Stack.Screen name="MyApplications" component={JobRouteRedirect} />'), "TDCCareers and MyApplications are registered as the redirect");
   }
 

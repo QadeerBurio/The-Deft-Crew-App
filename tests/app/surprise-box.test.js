@@ -322,7 +322,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     const modal = read("app/src/components/NotificationModal.js");
     const banner = read("app/src/components/NotificationBanner.js");
     ok(popup.includes("data.screen") && popup.includes("data.params") && modal.includes("m.screen") && modal.includes("m.params") && banner.includes("meta?.screen") && banner.includes("meta?.params"), "the in-app banner, the notification list and the banner card use the same screen + params");
-    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    const drawer = read("app/src/navigation/DrawerNavigator.js").split("<HS.Screen").join("<Stack.Screen"); // Q-3a: the home stack's <HS.Screen> (JS or native stack, chosen at start) is the same registration
     ok(drawer.includes('<Stack.Screen name="Career" component={Career} />') && drawer.includes('name="SurpriseBoxes"'), "SurpriseBoxes sits in the same stack as Career (where notification taps already go)");
     const opened = [];
     const realOrder = studioMock.surplusApi.order;

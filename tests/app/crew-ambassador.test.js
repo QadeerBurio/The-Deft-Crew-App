@@ -167,7 +167,7 @@ function setup({ flags = {}, auth = { token: "t", user: { _id: "U1", name: "Sana
   console.log("-- wiring");
   const routes = H.read("app/src/navigation/routes.js");
   const drawer = H.read("app/src/navigation/DrawerNavigator.js");
-  ok(["AmbassadorIntro", "AmbassadorApply", "AmbassadorHub"].every((n) => routes.includes(`"${n}"`) && drawer.includes(`<Stack.Screen name="${n}"`)), "the three screens are registered and in HOME_STACK");
+  ok(["AmbassadorIntro", "AmbassadorApply", "AmbassadorHub"].every((n) => routes.includes(`"${n}"`) && (drawer.includes(`<Stack.Screen name="${n}"`) || drawer.includes(`<HS.Screen name="${n}"`))), "the three screens are registered and in HOME_STACK");
   ok(/ambassadorOn && item\.route === 'Points' \? 'the crew · ambassador' : item\.label/.test(drawer) && drawer.includes("key={item.label}"), "drawer: 'the crew · ambassador' with the flag on (same route, same key)");
   const app = H.read("App.js");
   ok(app.includes("<AmbassadorInviteHost />"), "App mounts the invitation host");

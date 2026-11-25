@@ -28,6 +28,8 @@ import {
   DrawerContentScrollView,
 } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack'; // Q-3a (nativeStackDrawer)
+import { knownFlag } from '../api/appFlags';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -196,6 +198,10 @@ const NotificationSkillshare = accountOnly(NotificationSkillshareBase, { title: 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
+// Q-3a: the home stack on the native side (flag nativeStackDrawer); options matching the JS stack's: no header, paper
+// background, a fade between screens, swipe back on
+const NativeStack = createNativeStackNavigator();
+const NATIVE_HOME_OPTIONS = { headerShown: false, contentStyle: { backgroundColor: T.paper }, animation: 'fade', gestureEnabled: true };
 
 // ============================================================
 // MODULE-LEVEL CACHE — SkillShare gate runs once per session
@@ -1296,10 +1302,15 @@ function SocialStackNavigator() {
 // HOME STACK
 // ============================================================
 function HomeStackNavigator() {
+  // Q-3a (flag nativeStackDrawer, off by default): the native stack (transitions run on the native side, smooth even
+  // when JS is busy), chosen once per app start from the flags known then (switching navigators while the app is open
+  // would reset the screens). Off, or flags not known yet: the JS stack exactly as before. Same 65 screens either way.
+  const [native] = useState(() => knownFlag('nativeStackDrawer') === true);
+  const HS = native ? NativeStack : Stack;
   return (
-    <Stack.Navigator
+    <HS.Navigator
       initialRouteName="HomeTabs"
-      screenOptions={{
+      screenOptions={native ? NATIVE_HOME_OPTIONS : {
         headerShown: false,
         cardStyle: { backgroundColor: T.paper },
         cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -1307,78 +1318,78 @@ function HomeStackNavigator() {
         }),
       }}
     >
-      <Stack.Screen name="HomeTabs" component={HomeTabsScreen} />
-      <Stack.Screen name="University" component={University} />
-      <Stack.Screen name="ContactUs" component={ContactUs} />
-      <Stack.Screen name="Home" component={Home} />
-      <Stack.Screen name="BrandOffers" component={BrandOffersScreen} />
-      <Stack.Screen name="Points" component={PointsScreen} />
-      <Stack.Screen name="WhyPoints" component={WhyPointsScreen} />
-      <Stack.Screen name="How It Works" component={HowItWorksScreen} />
-      <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen name="Terms & Conditions" component={TermsScreen} />
-      <Stack.Screen name="Privacy Policy" component={PrivacyScreen} />
-      <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
-      <Stack.Screen name="FAQ" component={FAQScreen} />
-      <Stack.Screen name="Career" component={Career} />
-      <Stack.Screen name="JobDetails" component={JobDetails} options={{ gestureEnabled: true }} />
-      <Stack.Screen name="JobApplicationForm" component={JobApplicationForm} options={{ gestureEnabled: true }} />
-      <Stack.Screen name="ResumeStudio" component={ResumeStudio} />
-      <Stack.Screen name="TDCCareers" component={JobRouteRedirect} />
-      <Stack.Screen name="MyApplications" component={JobRouteRedirect} />
-      <Stack.Screen name="Booking" component={BookingScreen} />
-      <Stack.Screen name="Exchange" component={ExchangeScreen} />
-      <Stack.Screen name="ApplicationForm" component={ApplicationForm} />
-      <Stack.Screen name="Payment" component={PaymentScreen} />
-      <Stack.Screen name="Card" component={Card} />
-      <Stack.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
-      <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
-      <Stack.Screen name="DeftPro" component={DeftProScreen} />
-      <Stack.Screen name="FounderCircle" component={FounderCircleScreen} />
-      <Stack.Screen name="AmbassadorIntro" component={AmbassadorIntro} />
-      <Stack.Screen name="AmbassadorApply" component={AmbassadorApply} />
-      <Stack.Screen name="AmbassadorHub" component={AmbassadorHub} />
-      <Stack.Screen name="SocialStack" component={SocialStackNavigator} />
-      <Stack.Screen name="Social" component={Social} />
-      <Stack.Screen name="Messages" component={Social} />
-      <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
-      <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
-      <Stack.Screen name="UserProfile" component={UserProfile} />
-      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
-      <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
-      <Stack.Screen name="FeedScreen" component={FeedScreen} />
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
-      <Stack.Screen name="SocialNotifications" component={SocialNotificationScreen} />
-      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-      <Stack.Screen name="YourAccount" component={YourAccount} />
-      <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
-      <Stack.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
-      <Stack.Screen name="HelpCenter" component={HelpCenter} />
-      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="ChangePassword" component={ChangePassword} />
-      <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
-      <Stack.Screen name="Terrms" component={Terrms} />
-      <Stack.Screen name="Guideline" component={Guideline} />
-      <Stack.Screen name="Events" component={Events} />
-      <Stack.Screen name="EventTicket" component={EventTicket} />
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-      <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
-      <Stack.Screen name="MyDiscountScreen" component={MyDiscountScreen} />
-      <Stack.Screen name="Explore" component={Explore} />
-      <Stack.Screen name="Brands" component={Brands} />
-      <Stack.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
-      <Stack.Screen name="Badges" component={BadgesScreen} />
+      <HS.Screen name="HomeTabs" component={HomeTabsScreen} />
+      <HS.Screen name="University" component={University} />
+      <HS.Screen name="ContactUs" component={ContactUs} />
+      <HS.Screen name="Home" component={Home} />
+      <HS.Screen name="BrandOffers" component={BrandOffersScreen} />
+      <HS.Screen name="Points" component={PointsScreen} />
+      <HS.Screen name="WhyPoints" component={WhyPointsScreen} />
+      <HS.Screen name="How It Works" component={HowItWorksScreen} />
+      <HS.Screen name="About" component={AboutScreen} />
+      <HS.Screen name="Terms & Conditions" component={TermsScreen} />
+      <HS.Screen name="Privacy Policy" component={PrivacyScreen} />
+      <HS.Screen name="Disclaimer" component={DisclaimerScreen} />
+      <HS.Screen name="FAQ" component={FAQScreen} />
+      <HS.Screen name="Career" component={Career} />
+      <HS.Screen name="JobDetails" component={JobDetails} options={{ gestureEnabled: true }} />
+      <HS.Screen name="JobApplicationForm" component={JobApplicationForm} options={{ gestureEnabled: true }} />
+      <HS.Screen name="ResumeStudio" component={ResumeStudio} />
+      <HS.Screen name="TDCCareers" component={JobRouteRedirect} />
+      <HS.Screen name="MyApplications" component={JobRouteRedirect} />
+      <HS.Screen name="Booking" component={BookingScreen} />
+      <HS.Screen name="Exchange" component={ExchangeScreen} />
+      <HS.Screen name="ApplicationForm" component={ApplicationForm} />
+      <HS.Screen name="Payment" component={PaymentScreen} />
+      <HS.Screen name="Card" component={Card} />
+      <HS.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
+      <HS.Screen name="MainCharacter" component={MainCharacterScreen} />
+      <HS.Screen name="DeftPro" component={DeftProScreen} />
+      <HS.Screen name="FounderCircle" component={FounderCircleScreen} />
+      <HS.Screen name="AmbassadorIntro" component={AmbassadorIntro} />
+      <HS.Screen name="AmbassadorApply" component={AmbassadorApply} />
+      <HS.Screen name="AmbassadorHub" component={AmbassadorHub} />
+      <HS.Screen name="SocialStack" component={SocialStackNavigator} />
+      <HS.Screen name="Social" component={Social} />
+      <HS.Screen name="Messages" component={Social} />
+      <HS.Screen name="MessagesScreen" component={MessagesScreen} />
+      <HS.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
+      <HS.Screen name="UserProfile" component={UserProfile} />
+      <HS.Screen name="PostDetailScreen" component={PostDetailScreen} />
+      <HS.Screen name="CreatePostScreen" component={CreatePostScreen} />
+      <HS.Screen name="FeedScreen" component={FeedScreen} />
+      <HS.Screen name="Notifications" component={NotificationScreen} />
+      <HS.Screen name="SocialNotifications" component={SocialNotificationScreen} />
+      <HS.Screen name="SettingsScreen" component={SettingsScreen} />
+      <HS.Screen name="YourAccount" component={YourAccount} />
+      <HS.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
+      <HS.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
+      <HS.Screen name="HelpCenter" component={HelpCenter} />
+      <HS.Screen name="EditProfileScreen" component={EditProfileScreen} />
+      <HS.Screen name="ChangePassword" component={ChangePassword} />
+      <HS.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+      <HS.Screen name="Terrms" component={Terrms} />
+      <HS.Screen name="Guideline" component={Guideline} />
+      <HS.Screen name="Events" component={Events} />
+      <HS.Screen name="EventTicket" component={EventTicket} />
+      <HS.Screen name="ProfileScreen" component={ProfileScreen} />
+      <HS.Screen name="ProfileDetails" component={ProfileDetails} />
+      <HS.Screen name="MyDiscountScreen" component={MyDiscountScreen} />
+      <HS.Screen name="Explore" component={Explore} />
+      <HS.Screen name="Brands" component={Brands} />
+      <HS.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
+      <HS.Screen name="Badges" component={BadgesScreen} />
       {/* were drawer pages (no iOS swipe back there); the menu opens them here */}
-      <Stack.Screen name="Travelling" component={TravelingScreen} options={{ gestureEnabled: true }} />
-      <Stack.Screen name="Rewards" component={RewardsScreen} />
-      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-      <Stack.Screen
+      <HS.Screen name="Travelling" component={TravelingScreen} options={{ gestureEnabled: true }} />
+      <HS.Screen name="Rewards" component={RewardsScreen} />
+      <HS.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <HS.Screen
         name="OfferScreen"
         component={OfferScreen}
         options={{ animation: 'slide_from_right' }}
         getId={({ params }) => params?.brand?._id}
       />
-    </Stack.Navigator>
+    </HS.Navigator>
   );
 }
 

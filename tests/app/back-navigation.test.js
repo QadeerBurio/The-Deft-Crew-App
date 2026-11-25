@@ -34,7 +34,8 @@ global.__DEV__ = false;
   for (const n of ["Travelling", "Rewards", "NotificationSettings", "Points", "WhyPoints", "About", "Terms & Conditions", "Privacy Policy", "Disclaimer", "How It Works", "SocialStack"]) {
     ok(reg.HOME_STACK.includes(n), `${n} lives in the home stack (iOS swipe back, header back = goBack)`);
   }
-  ok(/<Stack\.Screen name="Travelling" component=\{TravelingScreen\} options=\{\{ gestureEnabled: true \}\} \/>/.test(drawerSrc), "Travelling: swipe back on");
+  // Q-3a: home-stack screens are <HS.Screen> (the JS or the native stack, chosen at start)
+  ok(/<(?:Stack|HS)\.Screen name="Travelling" component=\{TravelingScreen\} options=\{\{ gestureEnabled: true \}\} \/>/.test(drawerSrc), "Travelling: swipe back on");
   ok(/navigation\.navigate\("HomeTabs", \{ screen: "About" \}\)/.test(H.read("app/src/screens/SettingScreen.js")), "Settings (profile stack) opens About in the home stack by its nested path");
 
   console.log("── every registered screen has a back target (Q-a, plan Q-2)");
