@@ -23,9 +23,14 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
 (async () => {
   console.log("── growth/inviteLinks.js");
   const L = H.loader(asMock)(path.join(H.SRC, "growth/inviteLinks.js"));
-  ok(L.inviteLink("aisha1", "wa") === "https://gettdc.pk/i/AISHA1?c=wa" && L.inviteLink("X1Y2Z3", "sms") === "https://gettdc.pk/i/X1Y2Z3?c=direct", "share link: gettdc.pk/i/CODE?c=<channel> (unknown channel → direct)");
-  const msg = L.inviteMessage("aisha1", "wa");
+  const ON = { links: true };
+  ok(L.inviteLink("aisha1", "wa", ON) === "https://gettdc.pk/i/AISHA1?c=wa" && L.inviteLink("X1Y2Z3", "sms", ON) === "https://gettdc.pk/i/X1Y2Z3?c=direct", "launchLinks on: share link gettdc.pk/i/CODE?c=<channel> (unknown channel → direct)");
+  const msg = L.inviteMessage("aisha1", "wa", ON);
   ok(msg.includes("use my code: AISHA1") && msg.includes("your friend gets 100 points and you get 150 when they join and verify their email.") && msg.endsWith("https://gettdc.pk/i/AISHA1?c=wa"), "share text: the code, the owner's line, the link", msg);
+  // r9 (owner): until gettdc.pk is on Vercel (launchLinks off) a link that works today, never gettdc.pk/i/
+  ok(L.inviteLink("aisha1", "wa") === "https://play.google.com/store/apps/details?id=com.aqkhan110.tdc&referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3DAISHA1" && L.inviteLink("aisha1", "wa", { os: "ios" }) === "https://apps.apple.com/app/id6765877675", "launchLinks off (the default): the store link for the sharer's phone (Android: the code as the Play referrer)");
+  const msgOff = L.inviteMessage("aisha1", "wa");
+  ok(msgOff.includes("use my code: AISHA1") && !msgOff.includes("gettdc.pk") && msgOff.endsWith(L.storeLink("AISHA1")), "…the share text keeps the code and has no gettdc.pk link", msgOff);
   const parse = [["tdcapp://i/aisha1", "AISHA1"], ["https://gettdc.pk/i/AISHA1?c=wa", "AISHA1"], ["https://www.gettdc.pk/i/abc123/", "ABC123"], ["https://evil.example/i/AISHA1", null], ["tdcapp://post/123", null], ["https://gettdc.pk/i/a", null]];
   ok(parse.every(([u, want]) => L.inviteCodeFromUrl(u) === want), "link parsing: tdcapp:// and gettdc.pk only, codes 4–12 letters / digits", JSON.stringify(parse.map(([u]) => L.inviteCodeFromUrl(u))));
   ok(L.codeFromText("use my code: abc123\nyou both…") === "ABC123" && L.codeFromText("https://gettdc.pk/i/XYZ789?c=copy") === "XYZ789" && L.codeFromText("QWE456") === "QWE456" && L.codeFromText("hello there friend") === null, "pasted text: 'code: X', a link, or the code alone");
@@ -105,14 +110,20 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
     const { rn } = H.makeRN({ ActivityIndicator: "ActivityIndicator" });
     const shared = []; let captured = 0;
     const ViewShot = React.forwardRef(function ViewShot(p, ref) { if (ref && typeof ref === "object") ref.current = { capture: async () => { captured++; return "file:///card.png"; } }; return React.createElement("ViewShot", { options: p.options }, p.children); });
-    const load = H.loader({ react: React, "react-native": rn, "react-native-view-shot": { __esModule: true, default: ViewShot }, "expo-sharing": { isAvailableAsync: async () => true, shareAsync: async (u, o) => shared.push({ u, o }) }, "react-native-qrcode-svg": { __esModule: true, default: function QRCode(p) { return React.createElement("QRCode", p); } }, "@expo/vector-icons": { Ionicons: "Icon" }, ...asMock });
+    let linksOn = false; // r9: launchLinks
+    const load = H.loader({ "/hooks/useFlag": { __esModule: true, default: (n) => (n === "launchLinks" ? linksOn : null) }, react: React, "react-native": rn, "react-native-view-shot": { __esModule: true, default: ViewShot }, "expo-sharing": { isAvailableAsync: async () => true, shareAsync: async (u, o) => shared.push({ u, o }) }, "react-native-qrcode-svg": { __esModule: true, default: function QRCode(p) { return React.createElement("QRCode", p); } }, "@expo/vector-icons": { Ionicons: "Icon" }, ...asMock });
     const SC = load(path.join(H.SRC, "ui/ShareCard.js"));
     const done2 = [];
     const m = mount(React.createElement(SC.default, { visible: true, onClose() {}, variant: "invite", code: "aisha1", onShared: (v) => done2.push(v) }));
     await tick();
     const qr = H.find(m.tree, (x) => x.type === "QRCode");
     const shot = H.find(m.tree, (x) => x.type === "ViewShot");
-    ok(qr && qr.props.value === "https://gettdc.pk/i/AISHA1?c=direct" && H.textOf(m.tree).includes("code AISHA1") && H.textOf(m.tree).includes("join me on tdc"), "invite card: the code and a QR of the invite link");
+    ok(qr && qr.props.value === "https://apps.apple.com/app/id6765877675" && H.textOf(m.tree).includes("code AISHA1") && H.textOf(m.tree).includes("join me on tdc"), "invite card, launchLinks off: the code and a QR of the store link for this phone (the stub is iOS: the App Store; works today)", qr && qr.props.value);
+    linksOn = true;
+    const mOn = mount(React.createElement(SC.default, { visible: true, onClose() {}, variant: "invite", code: "aisha1" }));
+    await tick();
+    ok(H.find(mOn.tree, (x) => x.type === "QRCode")?.props.value === "https://gettdc.pk/i/AISHA1?c=direct", "…launchLinks on: a QR of the gettdc.pk invite link");
+    mOn.unmount(); linksOn = false;
     ok(shot && shot.props.options.width === 1080 && shot.props.options.height === 1350, "captured at 1080 × 1350");
     await H.byLabel(m.tree, "share the card").props.onPress(); await tick();
     ok(captured === 1 && shared[0]?.u === "file:///card.png" && shared[0].o.mimeType === "image/png" && done2[0] === "invite", "share: capture → expo-sharing (png) → onShared('invite')");
@@ -132,7 +143,8 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
   ok(/<InviteCodeExtras code=\{referralCode\} onCode=\{setReferralCode\}/.test(su) && /await api\.post\("\/auth\/signup", body[^\n]*\n\s*clearPendingRef\(\);/.test(su), "Signup: the extras under the code field; the saved code cleared once the account exists");
   const pts = H.read("app/src/components/Points.js");
   ok(/const growth = useFlag\(FLAGS\.growthV2\) === true;/.test(pts) && /const cardsOn = useFlag\(FLAGS\.shareCards\) === true;/.test(pts), "Points: reads growthV2 and shareCards");
-  ok(/if \(growth && referralCode\) return inviteLink\(referralCode, 'direct'\);/.test(pts) && /const msg = growth && referralCode \? inviteMessage\(referralCode, 'direct'\) :\s*`join the crew\./.test(pts), "…share link and text change only with growthV2 (today's text kept)");
+  ok(/if \(growth && referralCode\) return inviteLink\(referralCode, 'direct', linkOpts\);/.test(pts) && /const msg = growth && referralCode \? inviteMessage\(referralCode, 'direct', linkOpts\) :\s*`join the crew\./.test(pts), "…share link and text change only with growthV2 (today's text kept)");
+  ok(/const linksOn = useFlag\('launchLinks'\) === true;/.test(pts) && /\{ links: linksOn, os: Platform\.OS \}/.test(pts) && /inviteMessage\(referralCode, 'wa', linkOpts\)/.test(pts), "Points (r9): every invite link and text passes launchLinks (gettdc.pk/i/ only when on)");
   ok(/\{growth && \(\s*<TouchableOpacity onPress=\{onShareWhatsApp\}/.test(pts) && /\{growth && <ReferralLeaderboard/.test(pts) && /\{cardsOn && !!referralCode && \(\s*<ShareCardSheet/.test(pts), "…WhatsApp button and leaderboard only with growthV2; the share card only with shareCards");
   ok(/'friend joins: \+50 pts\. friend sorts first card: \+100 more\.'/.test(pts), "…flag off: today's code hint unchanged");
   ok(/\? 'your friend gets 100 points and you get 150 when they join and verify their email\.'/.test(pts) && !/you both get 100 points/.test(pts), "…growthV2 code hint: the owner's reward line (friend 100, you 150, after the e-mail is verified)");

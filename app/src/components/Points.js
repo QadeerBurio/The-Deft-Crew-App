@@ -193,6 +193,9 @@ const PointsScreen = () => {
   const { token, user } = useContext(AuthContext);
   const growth = useFlag(FLAGS.growthV2) === true;
   const cardsOn = useFlag(FLAGS.shareCards) === true;
+  // r9: gettdc.pk/i/ links only with launchLinks (gettdc.pk on Vercel); otherwise the store link that works today
+  const linksOn = useFlag('launchLinks') === true;
+  const linkOpts = React.useMemo(() => ({ links: linksOn, os: Platform.OS }), [linksOn]);
   const [cardOpen, setCardOpen] = useState(false);
   const { me, refresh: refreshEngagement } = useEngagement();
   const [ambassadorFormOpen, setAmbassadorFormOpen] = useState(false);
@@ -323,12 +326,12 @@ const PointsScreen = () => {
 
   const getShareLink = useCallback(() => {
     const code = referralCode || 'tdc';
-    if (growth && referralCode) return inviteLink(referralCode, 'direct'); // P1: the invite page (gettdc.pk/i/CODE)
+    if (growth && referralCode) return inviteLink(referralCode, 'direct', linkOpts); // P1: gettdc.pk/i/CODE once launchLinks is on, else the store link (r9)
     if (Platform.OS === 'ios') {
       return `${APP_STORE_URL}?referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${code}`;
     }
     return `${PLAY_STORE_URL}&referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${code}`;
-  }, [referralCode, growth]);
+  }, [referralCode, growth, linkOpts]);
 
   const onShare = useCallback(async () => {
     Animated.sequence([
@@ -337,7 +340,7 @@ const PointsScreen = () => {
     ]).start();
 
     try {
-      const msg = growth && referralCode ? inviteMessage(referralCode, 'direct') :
+      const msg = growth && referralCode ? inviteMessage(referralCode, 'direct', linkOpts) :
         `join the crew.\n\n` +
         `use my code: ${referralCode || 'TDC'}\n\n` +
         (ambassadorV2
@@ -353,7 +356,7 @@ const PointsScreen = () => {
   // P1 (growthV2): WhatsApp first (most used in Pakistan); without WhatsApp, the normal share sheet
   const onShareWhatsApp = useCallback(async () => {
     if (!referralCode) return;
-    const text = inviteMessage(referralCode, 'wa');
+    const text = inviteMessage(referralCode, 'wa', linkOpts);
     try {
       const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
       if (await Linking.canOpenURL(url)) await Linking.openURL(url);
@@ -361,7 +364,7 @@ const PointsScreen = () => {
     } catch (e) {
       Alert.alert('Error', plainError(e, "Couldn't open sharing. Please try again."));
     }
-  }, [referralCode]);
+  }, [referralCode, linkOpts]);
 
   const copyCode = useCallback(async () => {
     if (!referralCode) return;

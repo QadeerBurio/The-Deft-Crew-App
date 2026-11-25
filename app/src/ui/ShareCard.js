@@ -11,13 +11,14 @@
 //                point at whoever shared it
 // The sheet has a visible close button and closes with Android back.
 import React, { useRef, useState } from "react";
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, Modal, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import QRCode from "react-native-qrcode-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { inviteLink } from "../growth/inviteLinks";
+import useFlag from "../hooks/useFlag";
 
 const W = 300; // preview width; captured at 1080 × 1350 (4:5)
 const H = 375;
@@ -32,9 +33,10 @@ function lines(variant, data) {
   }
 }
 
-export function ShareCardView({ variant = "invite", code, data }) {
+export function ShareCardView({ variant = "invite", code, data, links = false }) {
   const own = variant === "confession" && /^https:\/\//.test(String(data?.url || ""));
-  const link = own ? String(data.url) : inviteLink(code, "direct");
+  // r9: the QR is gettdc.pk/i/<code> only with launchLinks on; otherwise the store page (works today)
+  const link = own ? String(data.url) : inviteLink(code, "direct", { links, os: Platform.OS });
   if (own) code = null;
   const t = lines(variant, data);
   return (
@@ -62,6 +64,7 @@ export function ShareCardView({ variant = "invite", code, data }) {
 }
 
 export default function ShareCardSheet({ visible, onClose, variant = "invite", code, data, onShared }) {
+  const links = useFlag("launchLinks") === true;
   const shot = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -89,7 +92,7 @@ export default function ShareCardSheet({ visible, onClose, variant = "invite", c
             </TouchableOpacity>
           </View>
           <ViewShot ref={shot} options={{ format: "png", quality: 1, width: 1080, height: 1350 }}>
-            <ShareCardView variant={variant} code={code} data={data} />
+            <ShareCardView variant={variant} code={code} data={data} links={links} />
           </ViewShot>
           {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 10 }}>{error}</Text>}
           <TouchableOpacity onPress={share} disabled={busy} accessibilityRole="button" accessibilityLabel="share the card" style={{ alignSelf: "stretch", minHeight: 48, borderRadius: 24, backgroundColor: T.ink, alignItems: "center", justifyContent: "center", marginTop: 16 }}>

@@ -21,16 +21,28 @@ export function inviteCodeFromUrl(url) {
   return code && CODE.test(code) ? code : null;
 }
 
-/** The share link for a code and channel (wa, ig, tt, copy, direct). */
-export function inviteLink(code, channel = "direct") {
+// r9 (owner): gettdc.pk/i/ only works once gettdc.pk is on Vercel (flag launchLinks). Until then every share uses a link
+// that works today: the store page for the sharer's phone (Android with the code as the Play referrer), the code in
+// the text. This is the default: a caller gets the gettdc.pk link only by passing { links: true } (launchLinks on).
+export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.aqkhan110.tdc";
+export const APP_STORE_URL = "https://apps.apple.com/app/id6765877675";
+export function storeLink(code, os = "android") {
+  if (os === "ios") return APP_STORE_URL;
+  const c = encodeURIComponent(String(code || "tdc").toUpperCase());
+  return `${PLAY_STORE_URL}&referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${c}`;
+}
+
+/** The share link for a code and channel (wa, ig, tt, copy, direct); opts: { links (launchLinks on), os } */
+export function inviteLink(code, channel = "direct", { links = false, os = "android" } = {}) {
+  if (!links) return storeLink(code, os);
   const c = CHANNELS.has(channel) ? channel : "direct";
   return `${INVITE_ORIGIN}/i/${encodeURIComponent(String(code || "").toUpperCase())}?c=${c}`;
 }
 
-/** The share text (owner's copy, lowercase voice). */
-export function inviteMessage(code, channel = "direct") {
+/** The share text (owner's copy, lowercase voice); opts as inviteLink */
+export function inviteMessage(code, channel = "direct", opts = {}) {
   const c = String(code || "").toUpperCase();
-  return `join me on tdc, the student app.\n\nuse my code: ${c}\nyour friend gets 100 points and you get 150 when they join and verify their email.\n\n${inviteLink(c, channel)}`;
+  return `join me on tdc, the student app.\n\nuse my code: ${c}\nyour friend gets 100 points and you get 150 when they join and verify their email.\n\n${inviteLink(c, channel, opts)}`;
 }
 
 /**
