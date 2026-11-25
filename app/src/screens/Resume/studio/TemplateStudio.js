@@ -28,6 +28,10 @@ const CARD_H = Math.round((CARD_W - 16) * 1.414);
 const REC_W = Math.round(W * 0.42);
 const REC_H = Math.round((REC_W - 12) * 1.414);
 const TABS = [['all', 'all'], ['ats', COLLECTIONS.ats], ['fresher', COLLECTIONS.fresher]];
+// r8: each card is a WebView with the fonts embedded; with 15 templates that's too many at once on a low-end phone.
+// The gallery mounts the first GALLERY_FIRST cards' previews, then GALLERY_STEP more as the student nears the end.
+const GALLERY_FIRST = 8;
+const GALLERY_STEP = 6;
 
 function Badge({ ats }) {
   if (ats === 'safe') return <Text style={s.badgeSafe} maxFontSizeMultiplier={M} accessibilityLabel="ATS-safe">ATS-safe</Text>;
@@ -55,6 +59,11 @@ export default function TemplateStudio() {
   const [atsOnly, setAtsOnly] = useState(false);
   const [compare, setCompare] = useState([]);
   const [customising, setCustomising] = useState(false);
+  const [previews, setPreviews] = useState(GALLERY_FIRST); // gallery cards with a live preview (r8)
+  useEffect(() => { setPreviews(GALLERY_FIRST); }, [tab, atsOnly]);
+  const nearEnd = ({ nativeEvent: e }) => {
+    if (e && e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - CARD_H * 2) setPreviews((n) => n + GALLERY_STEP);
+  };
   const recs = useMemo(() => recommend(resume || {}, list), [resume, list]);
   // P3d (resumeOutcomeStats): the real interview rate, only for templates the server says have enough data (>= 30
   // applications and >= 10 interviews); nothing at all for the rest
@@ -88,7 +97,7 @@ export default function TemplateStudio() {
     );
   }
   const shown = list.filter((t) => (tab === 'all' || t.collection === tab) && (!atsOnly || t.ats === 'safe'));
-  const card = (t, w, h) => {
+  const card = (t, w, h, preview = true) => {
     const on = selected === t.id;
     const cmp = compare.includes(t.id);
     return (
@@ -103,7 +112,7 @@ export default function TemplateStudio() {
         accessibilityHint="long-press to compare with another template"
         testID={`template-${t.id}`}
       >
-        <TemplateThumb resume={resume} templateId={t.id} width={w} height={h} />
+        {preview ? <TemplateThumb resume={resume} templateId={t.id} width={w} height={h} /> : <View style={[s.thumbWait, { width: w, height: h }]} />}
         <View style={s.cardFoot}>
           <Text style={s.name} maxFontSizeMultiplier={M} numberOfLines={1}>{t.name}</Text>
           {on ? <Ionicons name="checkmark-circle" size={18} color={T.ink} /> : null}
@@ -121,7 +130,7 @@ export default function TemplateStudio() {
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="templates" />
-      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }} scrollEventThrottle={200} onScroll={nearEnd}>
         <Text style={s.h} maxFontSizeMultiplier={M}>recommended for you</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.recRow}>
           {recs.map((r) => {
@@ -139,7 +148,7 @@ export default function TemplateStudio() {
           <Chip label="ATS-safe only" selected={atsOnly} onPress={() => setAtsOnly((v) => !v)} />
         </View>
         <Text style={s.note} maxFontSizeMultiplier={M}>every card is your own resume. switching template never changes your text. long-press two to compare.</Text>
-        <View style={s.grid}>{shown.map((t) => card(t, CARD_W - 16, CARD_H))}</View>
+        <View style={s.grid}>{shown.map((t, i) => card(t, CARD_W - 16, CARD_H, i < previews))}</View>
         {!shown.length && <Text style={s.muted} maxFontSizeMultiplier={M}>no template matches these filters.</Text>}
       </ScrollView>
       <View style={s.footer}>
@@ -182,6 +191,7 @@ const s = StyleSheet.create({
   note: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, paddingHorizontal: 16, marginTop: 8, marginBottom: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 16 },
   card: { backgroundColor: T.card, borderRadius: 12, borderWidth: 2, borderColor: T.line, padding: 6 },
+  thumbWait: { borderRadius: 6, borderWidth: 1, borderColor: T.lineSoft, backgroundColor: T.paper }, // r8: preview not mounted yet
   cardOn: { borderColor: T.ink },
   cardCompare: { borderStyle: 'dashed' },
   cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },

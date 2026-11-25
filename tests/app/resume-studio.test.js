@@ -98,6 +98,37 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     m.unmount();
   }
 
+  console.log("── r8: EVERY flag on together (the template screen)");
+  {
+    const t = setup({ flags: new Proxy({}, { get: () => true }), outcomes: [{ id: "campus", applications: 30, interviews: 10, rate: 33 }], hidden: ["two_tone"] });
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(5);
+    const ids = H.findAll(m.tree, (n) => n.type === "Thumb").map((n) => n.props.templateId);
+    ok(/recommended for you/.test(H.textOf(m.tree)) && ids.includes("campus") && !ids.includes("two_tone") && /33% got an interview/.test(H.textOf(m.tree)), "renders with every flag on: studio, the 10 new templates, admin-hidden one out, real rates", ids.join());
+    H.find(m.tree, (n) => n.props?.testID === "template-campus").props.onPress();
+    H.byLabel(m.tree, "use this template").props.onPress();
+    await H.tick(10);
+    ok(t.puts.some((p) => p[1]?.template === "campus"), "…picking a template still saves it");
+    m.unmount();
+  }
+
+  console.log("── r8: gallery previews mount in batches (each is a WebView)");
+  {
+    const t = setup();
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(5);
+    const cards = () => H.findAll(m.tree, (n) => /^template-/.test(n.props?.testID || "")).length;
+    const thumbs = () => H.findAll(m.tree, (n) => n.type === "Thumb").length;
+    ok(cards() === 3 + 15 && thumbs() === 3 + 8, `all 15 offered (+3 recommended), only 3 + 8 previews mounted at first (${cards()} cards, ${thumbs()} previews)`);
+    const sv = H.find(m.tree, (n) => n.type === "ScrollView" && typeof n.props.onScroll === "function");
+    sv.props.onScroll({ nativeEvent: { layoutMeasurement: { height: 800 }, contentOffset: { y: 2600 }, contentSize: { height: 3200 } } });
+    await H.tick(3);
+    ok(thumbs() === 3 + 14, `near the end: 6 more previews (${thumbs()})`);
+    H.byLabel(m.tree, "ATS Pro").props.onPress(); await H.tick(3);
+    ok(thumbs() <= 3 + 8, "a new tab starts with the first batch again");
+    m.unmount();
+  }
+
   console.log("── the studio");
   {
     const t = setup();
@@ -136,7 +167,7 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     const t = setup({ hidden: ["jakes", "two_tone", "modern_ats"] }); // the student's resume uses modern_ats
     const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
     await H.tick(5);
-    const ids = H.findAll(m.tree, (n) => n.type === "Thumb").map((n) => n.props.templateId);
+    const ids = H.findAll(m.tree, (n) => /^template-/.test(n.props?.testID || "")).map((n) => n.props.testID.slice(9)); // every card offered (previews mount in batches, r8)
     ok(!ids.includes("jakes") && !ids.includes("two_tone") && ids.includes("campus") && ids.includes("scholar"), "hidden ones are not offered; the other new templates are", ids.join());
     ok(ids.includes("modern_ats"), "…the student's applied template stays (hidden for new picks only)");
     m.unmount();
