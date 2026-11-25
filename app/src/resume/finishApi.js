@@ -15,4 +15,6 @@ export const verifiedFacts = async () => data(await client().get("/resume/verifi
 export const getPublicPage = async (resumeId) => data(await client().get(`/resume/${encodeURIComponent(resumeId)}/public-page`, { timeout: 15000 }));
 export const setPublicPage = async (resumeId, patch) => data(await client().put(`/resume/${encodeURIComponent(resumeId)}/public-page`, patch, { timeout: 15000 }));
 export const newPublicLink = async (resumeId) => data(await client().post(`/resume/${encodeURIComponent(resumeId)}/public-page/new-link`, {}, { timeout: 15000 }));
+// owner (25 Nov 2026): GET /resume/templates/hidden → the template ids the admin took out of the gallery
+export const hiddenTemplates = async () => (data(await client().get("/resume/templates/hidden", { timeout: 15000 })) || {}).hidden || [];
 export const templateOutcomes = async () => data(await client().get("/resume/template-outcomes", { timeout: 15000 })) || { templates: [] };

@@ -1,5 +1,6 @@
 // P3c step 2: the template studio (flags resumeV2 + resumeTemplatesV2)
-//   gallery: only the five + the library templates the owner approved (all unapproved today → only the five)
+//   gallery: the five + the approved library templates (owner 25 Nov 2026: all 10, the flag is the gate), minus the ones
+//     the admin hid (GET /resume/templates/hidden; the student's applied template stays listed)
 //   recommend(): up to 3, each with a reason, only templates in the gallery; fresher / projects / activities / target
 //   badges: ATS-safe from the real-PDF test (resume-ats.test.js); all five (Minimal since its headings went 0.08em → 0.05em)
 //   the template screen: flags off (or loading) → today's picker, untouched; both on → the studio
@@ -21,7 +22,7 @@ const RESUME = {
   workExperience: [], certifications: [], languages: [], achievements: [], settings: { track: "fresher" },
 };
 
-function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = RESUME, user = { profileImage: "https://res.cloudinary.com/x/me.jpg" }, outcomes = [] } = {}) {
+function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = RESUME, user = { profileImage: "https://res.cloudinary.com/x/me.jpg" }, outcomes = [], hidden = [] } = {}) {
   const { React, mount, contexts } = H.makeReact();
   const { rn } = H.makeRN();
   const puts = []; const events = []; const nav = { calls: [], goBack() {}, navigate: (...a) => nav.calls.push(a) };
@@ -43,7 +44,7 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     "/ui/Button": { __esModule: true, default: el("Button") },
     "/ui/Input": { __esModule: true, default: el("Input") },
     "/ui/Sheet": { __esModule: true, default: (p) => ({ type: "Sheet", props: { visible: p.visible, title: p.title, children: p.visible ? p.children : null } }) },
-    "/resume/finishApi": { __esModule: true, templateOutcomes: async () => ({ templates: outcomes }) }, // P3d (resumeOutcomeStats)
+    "/resume/finishApi": { __esModule: true, templateOutcomes: async () => ({ templates: outcomes }), hiddenTemplates: async () => hidden }, // P3d (resumeOutcomeStats)
     "/studio/TemplateThumb": { __esModule: true, default: (p) => ({ type: "Thumb", props: { templateId: p.templateId, styles: p.styles, resume: p.resume, children: null } }) },
   });
   let current = JSON.parse(JSON.stringify(resume));
@@ -59,7 +60,14 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
 
   console.log("── gallery");
   let g = studio.galleryTemplates();
-  ok(g.length === 5 && g.every((t) => t.older), "nothing approved yet: the gallery is today's five", g.map((t) => t.id).join());
+  ok(g.length === 15 && g.filter((t) => t.older).length === 5 && lib.LIBRARY.every((t) => t.approved === true), "all 10 new templates approved: the five + 10 (shown only with resumeTemplatesV2)", g.map((t) => t.id).join());
+  g = studio.galleryTemplates(["two_tone", "rezi", "made_up"]);
+  ok(g.length === 13 && !g.some((t) => t.id === "two_tone" || t.id === "rezi"), "admin hides two_tone and rezi: both out, an unknown id ignored", g.map((t) => t.id).join());
+  g = studio.galleryTemplates(["two_tone", "rezi"], "rezi");
+  ok(g.length === 14 && g.some((t) => t.id === "rezi") && !g.some((t) => t.id === "two_tone"), "…but the student's applied template stays listed");
+  lib.LIBRARY.forEach((t) => { t.approved = false; });
+  g = studio.galleryTemplates();
+  ok(g.length === 5 && g.every((t) => t.older), "an unapproved template never shows (the approval gate still works)", g.map((t) => t.id).join());
   ok(g.filter((t) => t.ats === "safe").length === 5 && studio.badgeOf("rezi") === "safe" && studio.badgeOf("modern_ats") === "safe", "badges: all five ATS-safe (the real-PDF test; Minimal since its 0.05em headings)");
   lib.LIBRARY.find((t) => t.id === "campus").approved = true;
   lib.LIBRARY.find((t) => t.id === "harvard").approved = true;
@@ -94,6 +102,7 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
   {
     const t = setup();
     const L = t.load(path.join(H.SRC, "services/templates/library.js")).LIBRARY; // this copy of the module
+    L.forEach((x) => { x.approved = false; }); // this block checks tabs and badges with two of them
     L.find((x) => x.id === "campus").approved = true;
     Object.assign(L.find((x) => x.id === "two_tone"), { approved: true, ats: "design" }); // test only: a template without the badge
     const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
@@ -119,6 +128,17 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     H.find(m.tree, (n) => n.props?.testID === "template-stanford").props.onLongPress();
     const modal = H.find(m.tree, (n) => n.type === "Modal");
     ok(modal.props.visible && H.findAll(modal, (n) => n.type === "Thumb").map((n) => n.props.templateId).join() === "jakes,stanford", "long-press two: side by side");
+    m.unmount();
+  }
+
+  console.log("── the studio: templates the admin hid (no app update)");
+  {
+    const t = setup({ hidden: ["jakes", "two_tone", "modern_ats"] }); // the student's resume uses modern_ats
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(5);
+    const ids = H.findAll(m.tree, (n) => n.type === "Thumb").map((n) => n.props.templateId);
+    ok(!ids.includes("jakes") && !ids.includes("two_tone") && ids.includes("campus") && ids.includes("scholar"), "hidden ones are not offered; the other new templates are", ids.join());
+    ok(ids.includes("modern_ats"), "…the student's applied template stays (hidden for new picks only)");
     m.unmount();
   }
 

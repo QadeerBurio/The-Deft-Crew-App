@@ -6,7 +6,9 @@
 // approved: the owner's design sign-off (P3c): only approved templates show in the app's gallery. App only.
 import { LIBRARY as SHARED } from '../../utils/resumeRender';
 
-const APPROVED = { campus: false, first_step: false, fresh_start: false, society_leader: false, project_first: false, internship_ready: false, scholar: false, harvard: false, clean_line: false, two_tone: false };
+// owner (25 Nov 2026): all 10 selectable once resumeTemplatesV2 is on (the flag is the sign-off gate; it stays off until
+// the owner approves the designs). The admin hides any single one later without an app update (hiddenTemplates).
+const APPROVED = { campus: true, first_step: true, fresh_start: true, society_leader: true, project_first: true, internship_ready: true, scholar: true, harvard: true, clean_line: true, two_tone: true };
 export const LIBRARY = SHARED.map((t) => ({ ...t, approved: APPROVED[t.id] === true }));
 
 // the five older templates' ATS result (tests/app/resume-ats.test.js; Minimal since its headings went 0.08em -> 0.05em)

@@ -20,7 +20,7 @@ import { galleryTemplates, recommend, COLLECTIONS } from '../../../resume/studio
 import TemplateThumb from './TemplateThumb';
 import CustomiseSheet from './CustomiseSheet';
 import useFlag from '../../../hooks/useFlag';
-import { templateOutcomes } from '../../../resume/finishApi';
+import { templateOutcomes, hiddenTemplates } from '../../../resume/finishApi';
 
 const W = Dimensions.get('window').width;
 const CARD_W = Math.floor((W - 16 * 2 - 12) / 2);
@@ -41,8 +41,15 @@ export default function TemplateStudio() {
   const { resumeId } = route.params || {};
   const { resumes = [], currentResume, updateResume } = useContext(ResumeContext);
   const resume = resumes.find((r) => r._id === resumeId) || (currentResume?._id === resumeId ? currentResume : null) || (!resumeId ? resumes[0] : null);
-  const list = useMemo(() => galleryTemplates(), []);
   const applied = templateOf(resume?.template).id;
+  // owner (25 Nov 2026): templates the admin hid (no app update); none hidden until the server answers or if it can't
+  const [hidden, setHidden] = useState([]);
+  useEffect(() => {
+    let live = true;
+    hiddenTemplates().then((h) => { if (live && Array.isArray(h)) setHidden(h); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const list = useMemo(() => galleryTemplates(hidden, applied), [hidden, applied]);
   const [selected, setSelected] = useState(applied);
   const [tab, setTab] = useState('all');
   const [atsOnly, setAtsOnly] = useState(false);

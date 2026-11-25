@@ -12,11 +12,13 @@ import { programmeOf, fieldOf } from './coach';
 export { COLLECTIONS };
 export const STUDIO_FLAG = 'resumeTemplatesV2';
 
-export function galleryTemplates() {
+// hidden: ids the admin took out (GET /resume/templates/hidden); keep: the student's applied template stays listed
+export function galleryTemplates(hidden = [], keep = null) {
+  const out = new Set(Array.isArray(hidden) ? hidden.filter((id) => id !== keep) : []);
   return [
     ...TEMPLATES.map((t) => ({ ...t, collection: 'ats', ats: OLD_BADGES[t.id] || null, older: true })),
     ...approvedLibrary().map((t) => ({ id: t.id, name: t.name, description: t.description, collection: t.collection, ats: t.ats || null, older: false })),
-  ];
+  ].filter((t) => !out.has(t.id));
 }
 
 export function badgeOf(id, list = galleryTemplates()) {
