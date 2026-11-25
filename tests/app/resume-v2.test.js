@@ -257,7 +257,8 @@ global.__DEV__ = false;
 
   console.log("── wiring (source)");
   const dash = H.read("app/src/screens/Resume/ResumeDashboard.js");
-  ok((dash.match(/navigation\.navigate\(newResumeScreen\)/g) || []).length === 2 && /const newResumeScreen = resumeV2 \? 'ResumeStart' : 'ResumeBuilder';/.test(dash), "dashboard: new resume → ResumeStart with the flag, the builder without");
+  // P5-4: the empty state's "create resume" (polishEmptyStates) is the third way in, to the same screen
+  ok((dash.match(/navigation\.navigate\(newResumeScreen\)/g) || []).length === 3 && /const newResumeScreen = resumeV2 \? 'ResumeStart' : 'ResumeBuilder';/.test(dash), "dashboard: new resume → ResumeStart with the flag, the builder without");
   ok(/name="ResumeStart"/.test(H.read("app/src/navigation/ResumeNavigator.js")) && /'ResumeStart',/.test(H.read("app/src/navigation/DrawerNavigator.js")), "ResumeStart is registered (full screen)");
   ok(/onGoTo\(m\.step, m\.key, m\.stepKey\)/.test(H.read("app/src/components/ResumeStrength.js")), "ResumeStrength passes the step key (older callers ignore it)");
   done();

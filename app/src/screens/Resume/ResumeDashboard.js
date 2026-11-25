@@ -37,6 +37,8 @@ import { plainError } from "../../utils/plainError";
 // FLAG_CAREER_MATCHING: "recommended for you" (the server's skill-evidence matcher, GET /jobs/recommendations/:resumeId)
 // and "invites to apply" (the "let employers invite me" switch + invites) show only with it on for the student
 import useFlag from "../../hooks/useFlag";
+// P5-4 (polishEmptyStates): the design system's EmptyState, loaded only when the flag is on (off: nothing new loads)
+const EmptyState = (props) => React.createElement(require("../../ui").EmptyState, props);
 import { matchingEnabled } from "../../api/matchingApi";
 import CareerInvites from "../../components/CareerInvites";
 import useAction from '../../hooks/useAction';
@@ -54,6 +56,7 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
   const matchingOn = useFlag("careerMatching", matchingEnabled) === true;
   // P3-1: with resumeV2 a new resume starts on ResumeStart (upload / from my tdc profile / start fresh)
   const resumeV2 = useFlag("resumeV2") === true;
+  const polishEmpty = useFlag("polishEmptyStates") === true; // P5-4
   const newResumeScreen = resumeV2 ? 'ResumeStart' : 'ResumeBuilder';
   // P3d (resumeV2 + resumeFeedback): recruiter-style feedback on the selected resume
   const feedbackOn = useFlag("resumeFeedback") === true && resumeV2;
@@ -810,6 +813,18 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     ? selectedResume.careerProfile.atsKeywords
     : [];
   const limitReached = totalCreationsUsed >= MAX_CREATIONS;
+  // P5-4 (polishEmptyStates): the empty state's action, the same steps as the "create resume" button below
+  const startNewResume = () => {
+    if (!requireAccount()) return;
+    if (limitReached) {
+      Alert.alert(
+        'Resume Limit Reached',
+        `You can have at most ${MAX_CREATIONS} resumes at a time. Delete an existing resume to create a new one.`
+      );
+      return;
+    }
+    navigation.navigate(newResumeScreen);
+  };
 
   // ============================================================
   // Main render
@@ -1062,6 +1077,9 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 </View>
               )}
             </>
+          ) : polishEmpty ? (
+            // P5-4 (polishEmptyStates): the design system's empty state, the same create action
+            <EmptyState mood="sleepy" title="no resume yet" line="build your first one. it takes a few minutes." actionLabel="create resume" onAction={startNewResume} />
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="document-text-outline" size={64} color={T.textFaint} />

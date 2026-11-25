@@ -85,6 +85,38 @@ global.__DEV__ = false;
   const signup = H.read("app/src/screens/SignupScreen.js");
   ok(/import \{ CITIES \} from "\.\/pkCities";/.test(signup) && /export const CITIES = \[/.test(H.read("app/src/screens/pkCities.js")), "the city list is shared with signup (moved unchanged)");
 
+  // empty states (polishEmptyStates): the design system's EmptyState (Dot face, one line, one action); off = as before
+  {
+    const { React: R2, mount: mount2 } = H.makeReact();
+    const { rn: rn2 } = H.makeRN();
+    let polish = false;
+    const loadF = H.loader({
+      react: R2, "react-native": rn2,
+      "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
+      "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
+      "../../ui": { EmptyState: "EmptyState" },
+      "../../hooks/useFlag": { __esModule: true, default: () => polish },
+    });
+    const isEmptyState = (el) => !!el && (el.type === "EmptyState" || el.type?.name === "EmptyState");
+    const Feed = loadF(path.join(H.SRC, "screens/Social/ConfessionFeed.js")).default;
+    const empty = (props) => { const m2 = mount2(R2.createElement(Feed, { listData: [], firstLoad: false, scope: "all", renderConfession: () => null, switchScope() {}, setRefreshing() {}, fetchConfessions() {}, handleFabPress: () => "fab", ...props })); const list = H.find(m2.tree, (n) => n.type === "FlatList"); return list.props.ListEmptyComponent; };
+    let e = empty({});
+    ok(e && !isEmptyState(e) && /no confessions yet/.test(text(e)), "confessions, flag off: the old empty view", text(e));
+    polish = true;
+    e = empty({});
+    ok(e && isEmptyState(e) && e.props.title === "no confessions yet" && e.props.mood === "sleepy" && e.props.actionLabel === "create confession" && e.props.onAction() === "fab", "flag on: EmptyState, same words, the same 'create confession' action");
+    const shown = mount2(e).tree;
+    ok(shown && shown.type === "EmptyState" && shown.props.title === "no confessions yet", "…rendered: the shared ui EmptyState (loaded only now, with the flag on)", JSON.stringify(shown && shown.type));
+    e = empty({ scope: "campus", myUniName: "" });
+    ok(isEmptyState(e) && e.props.title === "add your university" && e.props.actionLabel === "edit profile", "…campus without a university: 'add your university', 'edit profile'");
+    e = empty({ scope: "campus", myUniName: "NED" });
+    ok(isEmptyState(e) && /be the first from NED/.test(e.props.line), "…campus with nothing yet: 'be the first from NED.'");
+    const rd = H.read("app/src/screens/Resume/ResumeDashboard.js").replace(/\r\n/g, "\n");
+    ok(/const polishEmpty = useFlag\("polishEmptyStates"\) === true;/.test(rd) && /\) : polishEmpty \? \(\n\s*\/\/ P5-4[^\n]*\n\s*<EmptyState mood="sleepy" title="no resume yet" line="build your first one\. it takes a few minutes\." actionLabel="create resume" onAction=\{startNewResume\} \/>/.test(rd), "resumes, flag on: EmptyState with 'create resume'");
+    ok(/const startNewResume = \(\) => \{\n\s*if \(!requireAccount\(\)\) return;\n\s*if \(limitReached\) \{[\s\S]{0,260}navigation\.navigate\(newResumeScreen\);\n\s*\};/.test(rd) && /<Text style=\{styles\.emptyTitle\}>no resume found<\/Text>/.test(rd), "…its action follows the same steps (account, the limit, the new-resume screen); flag off: the old view");
+    ok(/<Dot mood="broke" size=\{56\} animated=\{false\} \/>/.test(H.read("app/src/screens/MyDiscountScreen.js")), "deals (my discounts) already had a Dot, one line and 'see brands' (unchanged)");
+  }
+
   // header search
   const dn = H.read("app/src/navigation/DrawerNavigator.js").replace(/\r\n/g, "\n");
   ok(/const headerSearchOn = useFlag\('headerSearch'\) === true;/.test(dn), "header: reads headerSearch");

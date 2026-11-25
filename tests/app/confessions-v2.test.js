@@ -60,6 +60,7 @@ function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null,
     react: React, "react-native": rn,
     "../../push/pushAsk": { pushMoment: () => {} }, // N-3 (pushAskV2): the flag off here
     "../../ui/RemoteImage": "RemoteImage",
+    "../../ui": { EmptyState: "EmptyState" }, // P5-4: the feed's empty state (polishEmptyStates)
     "@react-navigation/native": { useIsFocused: () => true, useFocusEffect: (cb) => React.useEffect(() => cb(), [cb]) },
     "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
     "expo-image-picker": picker || {}, "../../context/AuthContext": { AuthContext: { _default: { token: "tok", user: { _id: "me", university: { name: "U" } }, isGuest: false } } },

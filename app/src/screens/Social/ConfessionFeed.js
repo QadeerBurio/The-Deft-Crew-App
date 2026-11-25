@@ -9,10 +9,14 @@ import { soundTap } from "../../lib/tdcSounds";
 import { color as T } from "../../theme/tokens";
 import styles from "./confessionStyles";
 import { SORTS } from "./confessionV2";
+import useFlag from "../../hooks/useFlag";
+// P5-4 (polishEmptyStates): the design system's EmptyState, loaded only when the flag is on (off: nothing new loads)
+const EmptyState = (props) => React.createElement(require("../../ui").EmptyState, props);
 
 // v2 (P4a, flag confessionsV2): sort chips (hot · new · top this week) and tag filter chips under the scope tabs.
 // Without it the header is exactly as before.
 export default function ConfessionFeed({ flatListRef, listData, highlightId, scope, renderConfession, switchScope, myUniName, refreshing, setRefreshing, fetchConfessions, firstLoad, navigation, handleFabPress, v2 = false, sort = "hot", onSort = () => {}, tags = [], tagFilter = null, onTag = () => {}, savedOnly = false, onSaved = null }) {
+  const polishEmpty = useFlag("polishEmptyStates") === true; // P5-4
   return (
       <FlatList
         ref={flatListRef}
@@ -115,6 +119,13 @@ export default function ConfessionFeed({ flatListRef, listData, highlightId, sco
             <View style={styles.inlineLoader}>
               <ActivityIndicator size="small" color={T.yellow} />
             </View>
+          ) : polishEmpty ? (
+            // P5-4 (polishEmptyStates): the design system's empty state (Dot face, one line, one action), same words
+            scope === 'campus' && !myUniName ? (
+              <EmptyState mood="sus" title="add your university" line="add your university in your profile to see your campus." actionLabel="edit profile" onAction={() => { soundTap(); navigation?.navigate?.('EditProfileScreen'); }} />
+            ) : (
+              <EmptyState mood="sleepy" title={scope === 'campus' ? 'nothing from your campus yet' : 'no confessions yet'} line={scope === 'campus' ? `be the first from ${myUniName || 'your campus'}.` : "confess. nobody will know it's you."} actionLabel="create confession" onAction={handleFabPress} />
+            )
           ) : scope === 'campus' && !myUniName ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
