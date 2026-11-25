@@ -88,6 +88,53 @@ invite links use), so Signup fills it in. Guard: if the module is missing (an ol
 - `@sentry/react-native` (P0-5 option A): replace the body of `app/src/utils/reportError.js`.
 - `expo-store-review` (P5-8).
 
+## 3b. Part 2 prep (owner, 25 Nov 2026): exact changes, ready to apply when the owner says "build 1.3.0"
+
+Not committed as code on purpose: every item below changes `app.json` (which carries the owner's own uncommitted
+edit, never staged by the developer) and/or adds a native module that phones on the current binary don't have
+(release/r6 can reach them over the air, so it must not import these). Apply them on a `release/1.3.0` branch,
+together, then build. Each JS call is guarded (`try { require(...) } catch {}` + the module present), so the same JS
+also runs safely on an older binary.
+
+**a. App links, all three paths (P1 /i/, P3d /r/, P4c /c/).** `gettdc.pk` must be on Vercel first (owner, DNS).
+- `edu-boost/public/.well-known/assetlinks.json`: the Play App Signing SHA-256 (Play Console → App integrity).
+- `edu-boost/public/.well-known/apple-app-site-association`: the Apple Team ID; `components` gains
+  `{ "/": "/r/*" }` and `{ "/": "/c/*" }` next to `/i/*`.
+- `app.json` android `intentFilters`: one `VIEW` filter, `autoVerify: true`, scheme `https`, host `gettdc.pk`,
+  pathPrefix `/i/`, `/r/`, `/c/`. ios `associatedDomains`: `applinks:gettdc.pk`.
+- App: `App.js` ExternalDeepLink already handles `/i/<code>` (inviteLinks) and `tdcapp://confession/<id>`; add
+  `https://gettdc.pk/c/<id>` → the confession (the same handler as `tdcapp://confession/<id>`), and `/r/<link>` →
+  open the page in the browser (a public resume is a web page).
+- Check: `adb shell pm verify-app-links --re-verify com.aqkhan110.tdc` then `pm get-app-links` shows `verified`;
+  on iOS, a link pasted in Notes opens the app.
+
+**b. Play install referrer** (section 2): `npx expo install react-native-google-play-install-referrer`; the first-launch
+read in `App.js` after the splash, guarded.
+
+**c. Rate-us ask (P5-8), flag `rateAsk` (add to the server's flags, off).** `npx expo install expo-store-review`.
+`app/src/lib/rateAsk.js`: once per install, after a celebration closes (CelebrationPopup's `onClosed`), when the flag
+is on, `StoreReview.isAvailableAsync()` is true and the account is 7+ days old: `StoreReview.requestReview()`, then
+remember it (`@tdc_rate_asked`). Never after an error, a refusal or a payment. Apple / Google decide whether the
+sheet actually shows; nothing to count or claim.
+
+**d. Sentry (crash-free ≥ 99.5 %, plan Q-1).** `npx expo install @sentry/react-native`; `app.json` plugin
+`["@sentry/react-native/expo", { "organization": "<org>", "project": "<project>" }]`; the DSN as an EAS secret
+(`SENTRY_DSN`, never in the repo); `Sentry.init({ dsn, tracesSampleRate: 0.1, sendDefaultPii: false,
+beforeSend: scrub })` in `App.js` before anything else, where `scrub` reuses `lib/safeConsole.js`'s `safeArg` on the
+event's extra / breadcrumbs (no tokens, passwords or request bodies). `utils/reportError.js` then forwards to
+`Sentry.captureException` (its current console path stays as the fallback). Source maps upload in the EAS build
+(the plugin does it; `SENTRY_AUTH_TOKEN` as an EAS secret).
+
+**e. Android minify + shrink (Q-3h), internal track only first.** `app.json` → `expo-build-properties` (installed):
+`android.enableProguardInReleaseBuilds: true`, `android.enableShrinkResourcesInReleaseBuilds: true`. Keep rules if a
+library breaks (add to `android.extraProguardRules`): Stripe (`-keep class com.stripe.** { *; }`), WebRTC
+(`-keep class org.webrtc.** { *; }`), Facebook SDK (`-keep class com.facebook.** { *; }`). Internal-track test before
+any release: sign in (email + Google), pay (Stripe test card), a voice / video call, a push tap, the Meta events
+(Events Manager → Test events), a PDF download, image upload. Compare the download size with 1.2.x (Play Console →
+App bundle explorer); PERF-BASELINE.md has the row.
+
+**f. Tablet:** `supportsTablet` stays `true` (owner); the centred layout ships over the air (flag `tabletLayout`).
+
 ## 4. Version
 
 `app.json` version **1.3.0** (runtimeVersion = appVersion: a new runtime; over-the-air updates for 1.2.2 continue
