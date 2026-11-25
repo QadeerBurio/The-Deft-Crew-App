@@ -153,6 +153,21 @@ global.__DEV__ = false;
     global.setTimeout = realST;
   }
 
+  // P5-7: text scaling capped (MAX_FONT_SCALE, 1.3) on every Text of the upgrade's new screens; none of them animates
+  {
+    const NEW = ["screens/Resume/ResumeFinish.js", "screens/Resume/ResumeStart.js", "screens/Resume/ResumeCoachChat.js", "screens/Resume/ResumeFeedback.js", "screens/Resume/ResumeImportReview.js", "screens/Crew/AmbassadorIntro.js", "screens/Crew/AmbassadorHub.js", "screens/Crew/AmbassadorApply.js", "ui/ShareCard.js", "push/PushAskHost.js", "screens/home/CityCheckCard.js"];
+    const uncapped = [], animated = [];
+    for (const f of NEW) {
+      const s = H.read(`app/src/${f}`);
+      const tags = s.match(/<Text\b[^>]*?(?:\/?>)/gs) || [];
+      const n = tags.filter((t) => !/maxFontSizeMultiplier/.test(t)).length;
+      if (n) uncapped.push(`${f} (${n})`);
+      if (/Animated\.(timing|spring|loop|sequence)\(/.test(s) && !/isReduceMotionEnabled|useReducedMotion|reduceMotion/.test(s)) animated.push(f);
+    }
+    ok(uncapped.length === 0, `every Text in the ${NEW.length} new screens caps its scaling (maxFontSizeMultiplier)`, uncapped.join(", "));
+    ok(animated.length === 0, "…and none animates without checking reduce motion", animated.join(", "));
+  }
+
   // header search
   const dn = H.read("app/src/navigation/DrawerNavigator.js").replace(/\r\n/g, "\n");
   ok(/const headerSearchOn = useFlag\('headerSearch'\) === true;/.test(dn), "header: reads headerSearch");

@@ -16,7 +16,7 @@ import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import QRCode from "react-native-qrcode-svg";
 import { Ionicons } from "@expo/vector-icons";
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { inviteLink } from "../growth/inviteLinks";
 
 const W = 300; // preview width; captured at 1080 × 1350 (4:5)
@@ -40,18 +40,18 @@ export function ShareCardView({ variant = "invite", code, data }) {
   return (
     <View style={{ width: W, height: H, backgroundColor: T.ink, borderRadius: 24, padding: 22, justifyContent: "space-between" }} collapsable={false}>
       <View style={{ alignSelf: "flex-start", backgroundColor: T.yellow, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
-        <Text style={{ fontFamily: F.headingBold, fontSize: 16, color: T.ink }}>tdc</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.headingBold, fontSize: 16, color: T.ink }}>tdc</Text>
       </View>
       <View>
-        <Text style={{ fontFamily: F.headingBold, fontSize: t.quote ? 18 : 26, lineHeight: t.quote ? 24 : 30, color: T.white }} numberOfLines={t.quote ? 8 : 3}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.headingBold, fontSize: t.quote ? 18 : 26, lineHeight: t.quote ? 24 : 30, color: T.white }} numberOfLines={t.quote ? 8 : 3}>
           {t.quote ? `“${t.big}”` : t.big}
         </Text>
-        <Text style={{ fontFamily: F.body, fontSize: 14, color: T.onInkMuted, marginTop: 8 }}>{t.small}</Text>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.body, fontSize: 14, color: T.onInkMuted, marginTop: 8 }}>{t.small}</Text>
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          {!!code && <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.yellow, letterSpacing: 1 }}>code {String(code).toUpperCase()}</Text>}
-          <Text style={{ fontFamily: F.body, fontSize: 11, color: T.onInkMuted, marginTop: 2 }} numberOfLines={1}>{link.replace(/^https:\/\//, "").replace(/\?.*$/, "")}</Text>
+          {!!code && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.yellow, letterSpacing: 1 }}>code {String(code).toUpperCase()}</Text>}
+          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.body, fontSize: 11, color: T.onInkMuted, marginTop: 2 }} numberOfLines={1}>{link.replace(/^https:\/\//, "").replace(/\?.*$/, "")}</Text>
         </View>
         <View style={{ backgroundColor: T.white, padding: 6, borderRadius: 10 }}>
           <QRCode value={link} size={64} color={T.ink} backgroundColor={T.white} ecl="M" />
@@ -83,7 +83,7 @@ export default function ShareCardSheet({ visible, onClose, variant = "invite", c
       <View style={{ flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" }}>
         <View style={{ backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34, alignItems: "center" }}>
           <View style={{ alignSelf: "stretch", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <Text style={{ fontFamily: F.headingBold, fontSize: 18, color: T.ink }}>share as image</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.headingBold, fontSize: 18, color: T.ink }}>share as image</Text>
             <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="close" hitSlop={12} style={{ minWidth: 44, minHeight: 44, alignItems: "flex-end", justifyContent: "center" }}>
               <Ionicons name="close" size={22} color={T.ink} />
             </TouchableOpacity>
@@ -91,9 +91,9 @@ export default function ShareCardSheet({ visible, onClose, variant = "invite", c
           <ViewShot ref={shot} options={{ format: "png", quality: 1, width: 1080, height: 1350 }}>
             <ShareCardView variant={variant} code={code} data={data} />
           </ViewShot>
-          {!!error && <Text style={{ fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 10 }}>{error}</Text>}
+          {!!error && <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 10 }}>{error}</Text>}
           <TouchableOpacity onPress={share} disabled={busy} accessibilityRole="button" accessibilityLabel="share the card" style={{ alignSelf: "stretch", minHeight: 48, borderRadius: 24, backgroundColor: T.ink, alignItems: "center", justifyContent: "center", marginTop: 16 }}>
-            {busy ? <ActivityIndicator color={T.yellow} /> : <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.yellow }}>share</Text>}
+            {busy ? <ActivityIndicator color={T.yellow} /> : <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.yellow }}>share</Text>}
           </TouchableOpacity>
         </View>
       </View>

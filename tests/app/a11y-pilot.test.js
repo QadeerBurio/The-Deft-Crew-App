@@ -19,6 +19,13 @@ const FILES = [
   "app/src/components/LoyaltyCard.js", "app/src/components/LoyaltyVisits.js", "app/src/components/CareerApplications.js",
   "app/src/screens/Resume/ResumeStudio.js", "app/src/screens/SurpriseBoxes.js", "app/src/components/SurpriseBoxCard.js", "app/src/components/CareerInvites.js",
   "app/src/components/CareerRatings.js",
+  // P5-7 (owner): the screens added in the upgrade (the crew intro / hub and the share card put muted text on dark cards,
+  // which this file's light-background contrast check can't judge: their labels, roles and sizes are checked in p5b-polish)
+  "app/src/screens/Resume/ResumeStart.js", "app/src/screens/Resume/ResumeCoachChat.js", "app/src/screens/Resume/ResumeFinish.js",
+  "app/src/screens/Resume/ResumeFeedback.js", "app/src/screens/Resume/ResumeImportReview.js", "app/src/screens/Crew/AmbassadorApply.js",
+  "app/src/screens/home/CityCheckCard.js", "app/src/push/PushAskHost.js",
+  // (the confession composer / card are older than the upgrade and must render exactly as before with the flags off
+  // (confessions-v2): their gaps are listed for the owner, not changed)
 ];
 const TOUCH = new Set(["TouchableOpacity", "Pressable", "TouchableHighlight", "TouchableWithoutFeedback"]);
 const LABELLED = new Set([...TOUCH, "Switch", "TextInput"]);
@@ -42,6 +49,24 @@ function styleTable(ast) {
   });
   return out;
 }
+// P5-7: local style helpers like `const chip = (active) => [styles.visibilityChip, active && styles.chipActive]`
+// (per file): name -> the styles they return, so `style={chip(x)}` is measured like `style={styles.visibilityChip}`
+let styleFns = {};
+function localStyleFns(ast) {
+  const out = {};
+  babel.traverse(ast, {
+    VariableDeclarator(p) {
+      const init = p.node.init;
+      if (!init || p.node.id.type !== "Identifier" || (init.type !== "ArrowFunctionExpression" && init.type !== "FunctionExpression")) return;
+      const body = init.body.type === "BlockStatement" ? (init.body.body.find((s) => s.type === "ReturnStatement") || {}).argument : init.body;
+      const names = [];
+      const walk = (n) => { if (!n) return; if (n.type === "MemberExpression" && n.object.name === "styles") names.push(n.property.name); else if (n.type === "ArrayExpression") n.elements.forEach(walk); else if (n.type === "LogicalExpression") { walk(n.left); walk(n.right); } else if (n.type === "ConditionalExpression") { walk(n.consequent); walk(n.alternate); } };
+      walk(body);
+      if (names.length) out[p.node.id.name] = names;
+    },
+  });
+  return out;
+}
 const attr = (el, name) => el.openingElement.attributes.find((a) => a.type === "JSXAttribute" && a.name.name === name);
 function styleNames(el) {
   const a = attr(el, "style");
@@ -50,6 +75,7 @@ function styleNames(el) {
   const walk = (n) => {
     if (!n) return;
     if (n.type === "MemberExpression" && n.object.name === "styles") names.push(n.property.name);
+    else if (n.type === "CallExpression" && n.callee.type === "Identifier" && styleFns[n.callee.name]) names.push(...styleFns[n.callee.name]);
     else if (n.type === "ArrayExpression") n.elements.forEach(walk);
     else if (n.type === "LogicalExpression" || n.type === "ConditionalExpression") { walk(n.left); walk(n.right); walk(n.consequent); walk(n.alternate); }
     else if (n.type === "ObjectExpression") names.push({ inline: Object.fromEntries(n.properties.filter((q) => q.value?.type === "NumericLiteral").map((q) => [q.key.name, q.value.value])) });
@@ -66,11 +92,18 @@ for (const f of FILES) {
   const code = fs.readFileSync(path.join(APP, f), "utf8");
   const ast = babel.parseSync(code, { filename: f, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-syntax-jsx")] });
   const styles = styleTable(ast);
+  styleFns = localStyleFns(ast);
+  // P5-7: a file that takes its styles from a sibling (import styles from "./confessionStyles") gets those sizes too
+  const sib = code.match(/import styles from ["']\.\/([\w]+)["']/);
+  if (sib) { const sp = path.join(APP, path.dirname(f), `${sib[1]}.js`); if (fs.existsSync(sp)) Object.assign(styles, styleTable(babel.parseSync(fs.readFileSync(sp, "utf8"), { filename: sp, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-syntax-jsx")] })), styles); }
   babel.traverse(ast, {
     JSXElement(p) {
       const el = p.node;
       const name = el.openingElement.name.name;
       if (!LABELLED.has(name)) return;
+      // a wrapper marked accessible={false} is not a control (e.g. tap outside to close the keyboard): not announced
+      const acc = attr(el, "accessible");
+      if (acc?.value?.type === "JSXExpressionContainer" && acc.value.expression.type === "BooleanLiteral" && acc.value.expression.value === false) return;
       elements += 1;
       const where = `${path.basename(f)}:${line(el)} <${name}>`;
       const labelled = !!attr(el, "accessibilityLabel") || !!attr(el, "aria-label") || (TOUCH.has(name) && hasText(el)) || (name === "TextInput" && !!attr(el, "placeholder") && !!attr(el, "accessibilityLabel"));
