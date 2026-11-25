@@ -716,6 +716,19 @@ Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an 
 | optimistic actions (Q-3d) | checked: confession like / me-too / follow / save and the post like were already instant with roll-back; event save is local. New: a post's save (bookmark) under `optimisticActions` | APP `b470b2d` | qc-instant |
 | prefetch (Q-3e) | event details: touching a card starts GET /api/events/:id; opening within 5 s uses it, else a new request as before; a failed prefetch is forgotten (`prefetchDetails`). Other details screens (deal, job, confession) don't fetch through a shared cache: not changed | APP `b470b2d` | qc-instant 17/17 |
 
+## P5b: polish (branch `upgrade/p5b-polish` from `upgrade/qc-instant`; SERVER `upgrade/p5b-server` from `upgrade/qc-flags`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| flags + city route | `headerSearch`, `cityCheck`, `polishEmptyStates`, `celebrationsPlus` (student, off; grantable 41, student view 40). `POST /api/me/city` { confirm } / { city } (2-60 letters) sets the city and the new optional `User.cityConfirmedAt` with a targeted update (no full-document save); 404 without the flag, students only | SERVER `b8a4f036` | me-city 17/17; feature-access |
+| header search (P5-6) | the existing header brand search gets its button (and a close button), 40 pt + 4 pt hit slop; Brands already applies the query | APP `b0a2310` | p5b-polish |
+| city check | `screens/home/CityCheckCard.js`: once on Home, above near me, for a student whose server-side city is the old automatic "Karachi" and never confirmed; "yes, karachi" or another city (the signup list, moved split-only to `screens/pkCities.js`, APP `5480bfa`, tested on its own) | APP `b0a2310` | p5b-polish |
+| empty states (P5-4) | checked: deals (Dot + line + "see brands") and events already had them; confessions (3 cases) and "no resume yet" now use the design system's EmptyState (same words / actions); loaded only with the flag on | APP `967a720` | p5b-polish; resume-v2 counts the 3rd way in; confessions-v2 mocks the ui folder |
+| celebrations (P5-3) | checked: first claim ("deal hunter" badge) and level up (tier unlocked) already celebrated. New: a confession's author hears once at 10 likes (popup, no names / text / push; `Confession.likes10CelebratedAt`, atomic); "share it" on level up / "cv ready" opens the existing share card (the popup then stays until the student chooses) | SERVER `848e6396`, APP `0eda4ec` | confession-milestone 12/12; p5b-polish |
+| accessibility (P5-7) | the upgrade's new screens pass labels / roles / 44 pt / contrast (a11y-pilot extended to them; it now reads sibling style files and local style helpers); share card text capped; every Text in the 11 new screens capped; none animates without reduce motion | APP `6044cbc` | a11y-pilot 6/6, p5b-polish 33/33 |
+
+Not changed (owner to decide): the confession composer and card (older than the upgrade) have a11y gaps: no label on the text box, the photo-remove and post buttons, the plain share button; no role on the visibility chips and "show more"; card action buttons about 32 pt; no text-size cap. Fixing them changes the flag-off output that confessions-v2 requires to stay identical (and a cap is visible at large font sizes). The fix is ready to apply (labels, roles, 6 pt hit slop, caps) once the owner agrees.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
