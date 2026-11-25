@@ -46,7 +46,7 @@ import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
 import ConfessionFeed from "./ConfessionFeed";
-import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo, votePoll, setFollowing, setSavedConfession, shareConfession } from "./confessionApi";
+import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo, votePoll, setFollowing, setSavedConfession, shareConfession, setUpDownVote } from "./confessionApi";
 // P4c: the confession share card (text only, its own page's QR), loaded only when sharing is on
 import { feedQuery, viewKey } from "./confessionV2";
 // confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
@@ -57,6 +57,8 @@ import { reportError } from "../../utils/reportError";
 import ReportModal from "./ReportModal";
 import ConfessionSupportSheet from "./ConfessionSupportSheet";
 import ConfessionRulesSheet from "./ConfessionRulesSheet";
+import { alertBanned } from "./confessionAppeal"; // r7: appeal from a confession ban (P4-1)
+import { liveHint } from "./confessionLiveHint"; // r7: P4-4 live pre-check hint
 import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds, precheckText } from "./confessionSafetyApi";
 const { height, width } = Dimensions.get('window');
 
@@ -166,6 +168,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   // P4b: polls (confessionPolls), follow (confessionFollow), the saved view (confessionsV2); hooks always called
   const pollsFlag = useFlag('confessionPolls') === true;
   const followFlag = useFlag('confessionFollow') === true;
+  const votingFlag = useFlag('confessionsVoting') === true; // r7: up / down, used only for auto-hide
   const [pollOptions, setPollOptions] = useState(null);
   const [savedOnly, setSavedOnly] = useState(false);
   // P4c: share as an image card (confessionShare)
@@ -461,6 +464,15 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       patchItem(id, { following: !!r.following });
       funnel(on ? 'confession_followed' : 'confession_unfollowed');
     } catch (e) { patchItem(id, { following: !on }); reportError('confessionsV2', e, { step: 'follow' }); }
+  }, [token]);
+  // r7 (confessionsVoting): up / down, tap again to take it back; no counts (used only for auto-hide)
+  const handleUpDown = useCallback(async (id, prev, next) => {
+    soundTap();
+    patchItem(id, { myVote: next });
+    try {
+      const r = await setUpDownVote(token, id, next);
+      patchItem(id, { myVote: r?.vote ?? null });
+    } catch (e) { patchItem(id, { myVote: prev }); reportError('confessionsV2', e, { step: 'updown' }); }
   }, [token]);
   const handleSave = useCallback(async (id, on) => {
     soundTap();
@@ -810,8 +822,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         soundError();
         // confession safety: the server's own sentence (needs an edit, banned, too many) instead of a generic error
         let msg = null;
-        if (safety) { try { const e = await res.json(); if (typeof e?.error === 'string') msg = e.error; } catch (e2) {} }
-        Alert.alert(msg ? "couldn't post" : "Error", msg || "Failed to post comment");
+        let banned = false;
+        if (safety) { try { const e = await res.json(); banned = alertBanned(e); if (typeof e?.error === 'string') msg = e.error; } catch (e2) {} }
+        if (!banned) Alert.alert(msg ? "couldn't post" : "Error", msg || "Failed to post comment");
       }
     } catch (err) {
       soundError();
@@ -935,6 +948,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
           if (safety && response.status === 422 && err?.code === 'NEEDS_EDIT' && Array.isArray(err.reasons)) {
             setComposerIssues(err.reasons);
             funnel("confession_precheck_edit");
+          } else if (safety && alertBanned(err)) {
+            // banned from confessions (P4-1): the sentence + "appeal" when the server gives the address
           } else if (err?.error) Alert.alert("Couldn't post", err.error);
         } catch (e) {}
       }
@@ -1044,6 +1059,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     setReportTarget({ type: "ConfessionComment", id: `${selectedPost._id}:${comment._id}` });
   }, [selectedPost]);
 
+  // P4-4 (confessionSafety + confessionsV2): the live hint while typing (numbers, e-mail, id, links; the server decides)
+  const liveIssues = useMemo(() => (safety && v2 ? liveHint(newConfession) : []), [safety, v2, newConfession]);
+
   const handleConfessionTextChange = useCallback((text) => {
     setNewConfession(text);
     setComposerIssues((prev) => (prev.length ? [] : prev));
@@ -1113,9 +1131,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       openComments={openComments}
       safety={safety}
       onMore={safety ? handleMore : null}
-      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag), onSave: handleSave, ...(pollsFlag ? { onVote: handleVote } : {}), ...(followFlag ? { onFollow: handleFollow } : {}), ...(shareFlag ? { onShareImage: handleShareImage } : {}) } : {})}
+      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag), onSave: handleSave, ...(pollsFlag ? { onVote: handleVote } : {}), ...(followFlag ? { onFollow: handleFollow } : {}), ...(votingFlag ? { onUpDown: handleUpDown } : {}), ...(shareFlag ? { onShareImage: handleShareImage } : {}) } : {})}
     />
-  ), [shareFlag, handleShareImage, expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf, handleSave, pollsFlag, handleVote, followFlag, handleFollow]);
+  ), [shareFlag, handleShareImage, expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf, handleSave, pollsFlag, handleVote, followFlag, handleFollow, votingFlag, handleUpDown]);
 
   // No skeleton: tabs + list render right away, a small loader only while
   // a tab is loading for the very first time.
@@ -1152,7 +1170,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         confessionInputRef={confessionInputRef}
         newConfession={newConfession}
         setNewConfession={safety ? handleConfessionTextChange : setNewConfession}
-        issues={safety ? composerIssues : []}
+        issues={safety ? (composerIssues.length ? composerIssues : liveIssues) : []}
         selectedImage={selectedImage}
         setSelectedImage={setSelectedImage}
         handlePost={handlePost}

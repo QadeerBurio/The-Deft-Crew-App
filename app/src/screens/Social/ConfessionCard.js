@@ -14,7 +14,8 @@ import { avatarFor } from "./confessionV2";
 // v2 / onMeToo / tagLabel (P4a, flag confessionsV2): the handle (with its Dot avatar and a verified tick), the tag,
 // the mood and "me too". Without them the card is exactly as before.
 // onVote / onFollow / onSave (P4b): the poll (flag confessionPolls), the follow bell (confessionFollow) and save.
-export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null, onVote = null, onFollow = null, onSave = null, onShareImage = null }) {
+// onUpDown (r7, confessionsVoting): up / down arrows without counts, only where the feed gave myVote (not your own).
+export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null, onVote = null, onFollow = null, onSave = null, onShareImage = null, onUpDown = null }) {
     const poll = v2 && onVote && item.poll && Array.isArray(item.poll.options) ? item.poll : null;
     const voted = poll && poll.myVote != null;
     const handle = v2 && item.handle ? item.handle : null;
@@ -190,6 +191,25 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
             </TouchableOpacity>
           ) : null}
 
+          {/* r7 (confessionsVoting): up / down, no counts (used only for auto-hide); never on your own post (no myVote) */}
+          {v2 && onUpDown && "myVote" in item ? (
+              ["up", "down"].map((dir) => {
+                const on = item.myVote === dir;
+                return (
+                  <TouchableOpacity
+                    key={dir}
+                    hitSlop={6}
+                    style={styles.actionBtn}
+                    onPress={() => onUpDown(item._id, item.myVote ?? null, on ? null : dir)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={on ? `voted ${dir}, tap to undo` : dir === "up" ? "vote up" : "vote down"}
+                  >
+                    <Ionicons name={on ? `arrow-${dir}-circle` : `arrow-${dir}-circle-outline`} size={18} color={on ? T.yellow : T.onInkMuted} />
+                  </TouchableOpacity>
+                );
+              })
+          ) : null}
           {v2 && onFollow && typeof item.following === "boolean" ? (
             <TouchableOpacity
               hitSlop={6}

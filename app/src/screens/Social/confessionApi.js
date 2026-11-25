@@ -77,6 +77,8 @@ const putJson = async (token, path, body) => {
 export const votePoll = (token, id, option) => putJson(token, `/confessions/${encodeURIComponent(id)}/poll`, { option });
 // follow / unfollow, the author: mute / unmute → { following }   (flag confessionFollow)
 export const setFollowing = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/follow`, { on });
+// r7: up / down / null → { vote }   (flag confessionsVoting; used only for auto-hide, no counts)
+export const setUpDownVote = (token, id, vote) => putJson(token, `/confessions/${encodeURIComponent(id)}/vote`, { vote });
 // save / unsave → { saved }   (confessionsV2; the list: the feed with saved=1)
 export const setSavedConfession = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/save`, { on });
 

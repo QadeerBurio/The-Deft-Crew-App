@@ -44,6 +44,7 @@ function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null,
     if (/\/confessions\/[^/]+\/poll$/.test(url) && method === "PUT") return reply(200, { poll: { options: [{ text: "chai", votes: 3 }, { text: "coffee", votes: 1 }], total: 4, myVote: 0 } });
     if (/\/confessions\/[^/]+\/follow$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { following: b.on !== false }); }
     if (/\/confessions\/[^/]+\/share$/.test(url) && method === "POST") { const [st, js] = server.share ? server.share(url.split("/").slice(-2)[0]) : [200, { url: "https://gettdc.pk/c/x", text: "" }]; return reply(st, js); }
+    if (/\/confessions\/[^/]+\/vote$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return server.vote ? server.vote(b) : reply(200, { vote: b.vote ?? null }); }
     if (/\/confessions\/[^/]+\/save$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { saved: b.on !== false }); }
     if (url.includes("/confessions/create")) return server.create ? server.create() : reply(201, { confession: { _id: "new" } });
     if (/\/confessions\/comment\/[^/]+$/.test(url) && method === "POST") return server.comment ? server.comment() : reply(200, { _id: "p1", comments: [] });
@@ -75,7 +76,7 @@ function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null,
   const load = H.loader(mocks);
   const Screen = load(file).default;
   const root = mount(React.createElement(Screen, { navigation: { navigate() {} } }));
-  return { React, root, alerts, calls, funnels, mount, restore: () => { global.setInterval = realSI; } };
+  return { React, root, alerts, calls, funnels, mount, load, restore: () => { global.setInterval = realSI; } };
 }
 
 const find = (n, pred) => H.find(n, (x) => x?.props && pred(x));
@@ -265,7 +266,73 @@ async function snapshots(file, flag, v2 = false) {
   const sends = findAll(ctx.root.tree, (x) => x.type === "TouchableOpacity" && find(x, (y) => y.props?.name === "send"));
   await sends[sends.length - 1].props.onPress(); await tick(120);
   ok(ctx.alerts.some((x) => x.title === "couldn't post" && /until 2026-11-22/.test(x.text)), "a refused comment shows the server's sentence", JSON.stringify(ctx.alerts.map((x) => x.title)));
+  ok(!ctx.alerts.some((x) => (x.buttons || []).some((b) => b.text === "appeal")), "…no appeal address from the server: no 'appeal' button");
   ctx.restore();
+
+  console.log("── r7: appeal from a confession ban (P4-1; the server sends SAFETY_APPEAL_EMAIL when set)");
+  {
+    const BAN = { code: "CONFESSION_BANNED", error: "you can't post confessions or comments until 2026-11-22 10:00 (community rules).", appealEmail: "safety@gettdc.pk" };
+    ctx = setup(SCREEN, { flag: true, server: { rulesAccepted: true, create: () => ({ ok: false, status: 403, json: async () => BAN }), comment: () => ({ ok: false, status: 403, json: async () => BAN }) } });
+    await tick(120);
+    await press(ctx.root.tree, "confess"); await tick(300);
+    find(ctx.root.tree, (x) => x.type === "TextInput" && x.props.maxLength === 1000).props.onChangeText("a normal confession"); await tick(30);
+    await find(ctx.root.tree, (x) => x.type === "TouchableOpacity" && H.textOf(x).includes("post confession")).props.onPress(); await tick(120);
+    const postAlerts = ctx.alerts.filter((x) => x.title === "couldn't post" || x.title === "Couldn't post");
+    ok(postAlerts.length === 1 && /until 2026-11-22/.test(postAlerts[0].text) && postAlerts[0].buttons?.[0]?.text === "appeal", "banned post: one alert, the server's sentence, 'appeal' first", JSON.stringify(postAlerts.map((x) => [x.title, (x.buttons || []).map((b) => b.text)])));
+    postAlerts[0].buttons[0].onPress(); await tick(20);
+    ok(ctx.funnels.includes("confession_appeal_opened"), "'appeal' opens the email (funnel confession_appeal_opened)");
+    const appeal = ctx.load(path.join(H.SRC, "screens/Social/confessionAppeal.js"));
+    ok(appeal.appealAddress(BAN) === "safety@gettdc.pk" && appeal.appealAddress({ appealEmail: "not an email" }) === null && appeal.alertBanned({ code: "NEEDS_EDIT" }) === false, "only a real address gives the button; other errors are left alone");
+    ctx.restore();
+  }
+
+  console.log("── r7: P4-4 live pre-check hint (confessionSafety + confessionsV2)");
+  for (const v2on of [true, false]) {
+    ctx = setup(SCREEN, { flag: true, v2: v2on, server: { rulesAccepted: true, config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } } } });
+    await tick(150);
+    await press(ctx.root.tree, "confess"); await tick(300);
+    const box = () => find(ctx.root.tree, (x) => x.props.accessibilityRole === "alert");
+    const type = async (t) => { find(ctx.root.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "write your confession").props.onChangeText(t); await tick(30); };
+    await type("call me on 0300-1234567 tonight");
+    if (v2on) {
+      ok(box() && /phone number, e-mail or id number/.test(H.textOf(box())) && H.textOf(box()).includes("0300-1234567"), "typing a phone number: the hint and the number show before 'post'", H.textOf(box() || {}));
+      await type("my insta is tdc.pk/me");
+      ok(box() && /links aren't allowed/.test(H.textOf(box())), "…a link: the link sentence (the server's own words)");
+      await type("a normal hostel story");
+      ok(!box(), "…clean text: the hint goes away");
+      ok(!ctx.calls.some((c) => c.url.includes("/confessions/precheck") || c.url.includes("/confessions/create")), "…all on the phone: no request while typing");
+    } else {
+      ok(!box(), "confessionsV2 off: no live hint (the server's reasons after 'post', as before)");
+    }
+    ctx.restore();
+  }
+  console.log("── r7: up / down voting (confessionsVoting; used only for auto-hide, no counts)");
+  for (const on of [false, true]) {
+    const vFeed = () => baseFeed().map((c, i) => (i === 0 ? { ...c, myVote: null } : i === 1 ? { ...c, myVote: "down" } : c)); // the 3rd: my own (no myVote)
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: on ? { confessionsVoting: true } : {}, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: vFeed } });
+    await tick(150);
+    let r = rows(ctx);
+    const arrows = (t) => !!find(t, (x) => x.props.accessibilityLabel === "vote up" || /^voted (up|down)/.test(x.props.accessibilityLabel || ""));
+    if (!on) {
+      ok(!r.some((x) => arrows(x.tree)), "flag off: no arrows anywhere (the card as before)");
+    } else {
+      ok(arrows(r[0].tree) && find(r[1].tree, (x) => x.props.accessibilityLabel === "voted down, tap to undo") && !arrows(r[2].tree), "flag on: arrows where the feed gave myVote (mine shown as voted); none on my own post");
+      ok(!/\bvote(s)? \d/.test(H.textOf(r[0].tree)), "…no count anywhere");
+      await press(r[0].tree, "vote down"); await tick(60);
+      const put = ctx.calls.filter((c) => c.method === "PUT" && /\/confessions\/p1\/vote$/.test(c.url));
+      ok(put.length === 1 && put[0].body.vote === "down", "vote down → PUT /confessions/p1/vote { vote: down }", JSON.stringify(put));
+      r = rows(ctx);
+      ok(find(r[0].tree, (x) => x.props.accessibilityLabel === "voted down, tap to undo"), "…then shown as voted");
+      await press(r[0].tree, "voted down, tap to undo"); await tick(60);
+      ok(ctx.calls.filter((c) => /\/vote$/.test(c.url)).slice(-1)[0].body.vote === null && find(rows(ctx)[0].tree, (x) => x.props.accessibilityLabel === "vote down"), "tap again: { vote: null }, back to none");
+    }
+    ctx.restore();
+  }
+  {
+    const L = H.loader({})(path.join(H.SRC, "screens/Social/confessionLiveHint.js"));
+    const codes = (t) => L.liveHint(t).map((r) => r.code).join();
+    ok(codes("my cnic 42101-1234567-1 ok") === "personal_info" && codes("mail me at a@b.co please") === "personal_info" && codes("+92 300 1234567 call") === "personal_info" && codes("see www.example.com now") === "link" && codes("the class at 3 pm in room 12") === "", "the patterns: CNIC, e-mail, +92 phone, link; plain numbers are fine");
+  }
 
   console.log("── precheck before the image upload (source: the composer has no image button today, so it's dormant)");
   {
