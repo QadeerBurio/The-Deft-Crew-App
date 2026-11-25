@@ -24,8 +24,8 @@ const FILES = [
   "app/src/screens/Resume/ResumeStart.js", "app/src/screens/Resume/ResumeCoachChat.js", "app/src/screens/Resume/ResumeFinish.js",
   "app/src/screens/Resume/ResumeFeedback.js", "app/src/screens/Resume/ResumeImportReview.js", "app/src/screens/Crew/AmbassadorApply.js",
   "app/src/screens/home/CityCheckCard.js", "app/src/push/PushAskHost.js",
-  // (the confession composer / card are older than the upgrade and must render exactly as before with the flags off
-  // (confessions-v2): their gaps are listed for the owner, not changed)
+  // owner (25 Nov 2026): the accessibility fix for the confession composer / card goes to everyone
+  "app/src/screens/Social/ConfessionComposer.js", "app/src/screens/Social/ConfessionCard.js",
 ];
 const TOUCH = new Set(["TouchableOpacity", "Pressable", "TouchableHighlight", "TouchableWithoutFeedback"]);
 const LABELLED = new Set([...TOUCH, "Switch", "TextInput"]);

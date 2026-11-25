@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, Animated, Share, Image } from "react-nati
 import RemoteImage from "../../ui/RemoteImage";
 import { Ionicons } from '@expo/vector-icons';
 import { soundTap } from "../../lib/tdcSounds";
-import { color as T } from "../../theme/tokens";
+import { color as T, MAX_FONT_SCALE } from "../../theme/tokens";
 import styles from "./confessionStyles";
 import { MOOD_IMAGES } from "../../engagement/utils/mood";
 import { avatarFor } from "./confessionV2";
@@ -25,7 +25,7 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
     const badge = (
           <View style={styles.confessionBadge}>
             <Ionicons name="lock-closed" size={10} color={isCampus ? T.yellow : T.onInkMuted} />
-            <Text style={[styles.badgeText, isCampus && { color: T.yellow }]}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeText, isCampus && { color: T.yellow }]}>
               {isCampus ? 'campus only' : 'confession'}
             </Text>
           </View>
@@ -41,24 +41,24 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
               </View>
             ) : (
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarQ}>?</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.avatarQ}>?</Text>
             </View>
             )}
             <View style={{ flexShrink: 1 }}>
               <View style={styles.nameRow}>
                 {handle ? (
-                  <Text style={styles.anonymousName} numberOfLines={1} accessibilityLabel={`@${handle}${item.handleVerified ? ", verified student" : ""}`}>@{handle}{item.handleVerified ? <Text style={{ color: T.yellow }}> ✓</Text> : null}</Text>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.anonymousName} numberOfLines={1} accessibilityLabel={`@${handle}${item.handleVerified ? ", verified student" : ""}`}>@{handle}{item.handleVerified ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={{ color: T.yellow }}> ✓</Text> : null}</Text>
                 ) : (
-                <Text style={styles.anonymousName}>anon.</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.anonymousName}>anon.</Text>
                 )}
-                <Text style={styles.nameDot}>·</Text>
-                <Text style={[styles.postTime, { marginTop: 0 }]}>{formatPostTime(item.createdAt)}</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.nameDot}>·</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.postTime, { marginTop: 0 }]}>{formatPostTime(item.createdAt)}</Text>
               </View>
               {/* University name only in the "my campus" tab */}
               {scope === 'campus' && !!item.campusName && (
                 <View style={styles.campusPill}>
                   <Ionicons name="school" size={11} color={T.onInkMuted} />
-                  <Text style={styles.campusPillText} numberOfLines={1}>
+                  <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.campusPillText} numberOfLines={1}>
                     {item.campusName}
                   </Text>
                 </View>
@@ -84,17 +84,17 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
         {safety && item.status === 'pending' && (
           <View style={[styles.campusPill, { alignSelf: 'flex-start', marginBottom: 8 }]} accessibilityLabel="under review: only you can see this">
             <Ionicons name="time-outline" size={11} color={T.yellow} />
-            <Text style={[styles.campusPillText, { color: T.yellow }]}>under review · only you can see this</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.campusPillText, { color: T.yellow }]}>under review · only you can see this</Text>
           </View>
         )}
 
         {v2 && (tagLabel || item.mood) ? (
           <View style={{ flexDirection: "row", gap: 6, marginBottom: 8, alignItems: "center" }}>
-            {tagLabel ? <View style={styles.campusPill}><Text style={styles.campusPillText}>#{tagLabel}</Text></View> : null}
+            {tagLabel ? <View style={styles.campusPill}><Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.campusPillText}>#{tagLabel}</Text></View> : null}
             {item.mood && MOOD_IMAGES[item.mood] ? (
               <View style={styles.campusPill} accessibilityLabel={`mood: ${item.mood}`}>
                 <Image source={MOOD_IMAGES[item.mood]} style={{ width: 14, height: 14 }} />
-                <Text style={styles.campusPillText}>{item.mood}</Text>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.campusPillText}>{item.mood}</Text>
               </View>
             ) : null}
           </View>
@@ -102,7 +102,7 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
 
         {item.text && (
           <View>
-            <Text
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={styles.confessionText}
               numberOfLines={isExpanded ? undefined : 7}
               onTextLayout={(e) => handleTextLayout(item._id, e)}
@@ -110,8 +110,8 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
               {item.text}
             </Text>
             {shouldShowMore && (
-              <TouchableOpacity onPress={() => toggleExpand(item._id)} style={styles.showMoreBtn}>
-                <Text style={styles.showMoreText}>{isExpanded ? 'show less' : 'show more'}</Text>
+              <TouchableOpacity onPress={() => toggleExpand(item._id)} style={styles.showMoreBtn} accessibilityRole="button" hitSlop={8}>
+                <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.showMoreText}>{isExpanded ? 'show less' : 'show more'}</Text>
                 <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={T.yellow} />
               </TouchableOpacity>
             )}
@@ -140,55 +140,59 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
                 >
                   {voted ? <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, backgroundColor: mine ? T.yellow : T.onInkMuted, opacity: 0.25 }} /> : null}
                   <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12, gap: 8 }}>
-                    <Text style={[styles.actionText, { color: T.white, flexShrink: 1 }]}>{o.text}</Text>
-                    {voted ? <Text style={[styles.actionText, mine && { color: T.yellow }]}>{pct}%</Text> : null}
+                    <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.actionText, { color: T.white, flexShrink: 1 }]}>{o.text}</Text>
+                    {voted ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.actionText, mine && { color: T.yellow }]}>{pct}%</Text> : null}
                   </View>
                 </TouchableOpacity>
               );
             })}
-            <Text style={[styles.postTime, { marginTop: 0 }]}>{poll.total} {poll.total === 1 ? "vote" : "votes"} · anonymous{voted ? " · tap to change" : ""}</Text>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.postTime, { marginTop: 0 }]}>{poll.total} {poll.total === 1 ? "vote" : "votes"} · anonymous{voted ? " · tap to change" : ""}</Text>
           </View>
         ) : null}
 
         <View style={styles.cardFooter}>
           <TouchableOpacity
+            hitSlop={6}
             style={[styles.actionBtn, isLiked && styles.actionBtnLiked]}
             onPress={() => handleLike(item._id)}
             accessibilityRole="button"
             accessibilityLabel={isLiked ? `liked, ${item.likes || 0}` : `like, ${item.likes || 0}`}
           >
             <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? T.yellow : T.onInkMuted} />
-            <Text style={[styles.actionText, isLiked && { color: T.yellow }]}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.actionText, isLiked && { color: T.yellow }]}>
               {item.likes > 0 ? item.likes : 'like'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
+            hitSlop={6}
             style={styles.actionBtn}
             onPress={() => openComments(item)}
             accessibilityRole="button"
             accessibilityLabel="comments"
           >
             <Ionicons name="chatbubble-outline" size={18} color={T.onInkMuted} />
-            <Text style={styles.actionText}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.actionText}>
               {item.comments?.length > 0 ? item.comments.length : 'comment'}
             </Text>
           </TouchableOpacity>
 
           {v2 && onMeToo ? (
             <TouchableOpacity
+              hitSlop={6}
               style={[styles.actionBtn, item.meTooByCurrentUser && styles.actionBtnLiked]}
               onPress={() => onMeToo(item._id)}
               accessibilityRole="button"
               accessibilityLabel={item.meTooByCurrentUser ? `me too, ${item.meTooCount || 0}, tap to undo` : `me too, ${item.meTooCount || 0}`}
             >
               <Ionicons name={item.meTooByCurrentUser ? "hand-left" : "hand-left-outline"} size={18} color={item.meTooByCurrentUser ? T.yellow : T.onInkMuted} />
-              <Text style={[styles.actionText, item.meTooByCurrentUser && { color: T.yellow }]}>{item.meTooCount > 0 ? `me too ${item.meTooCount}` : "me too"}</Text>
+              <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.actionText, item.meTooByCurrentUser && { color: T.yellow }]}>{item.meTooCount > 0 ? `me too ${item.meTooCount}` : "me too"}</Text>
             </TouchableOpacity>
           ) : null}
 
           {v2 && onFollow && typeof item.following === "boolean" ? (
             <TouchableOpacity
+              hitSlop={6}
               style={styles.actionBtn}
               onPress={() => onFollow(item._id, !item.following)}
               accessibilityRole="button"
@@ -199,6 +203,7 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
           ) : null}
           {v2 && onSave && typeof item.saved === "boolean" ? (
             <TouchableOpacity
+              hitSlop={6}
               style={styles.actionBtn}
               onPress={() => onSave(item._id, !item.saved)}
               accessibilityRole="button"
@@ -211,7 +216,7 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
           {/* P4c (confessionShare): share as an image card, only when the server says it may be (public, live, no open
               report); then the plain-text share below is not offered */}
           {v2 && onShareImage && item.shareable === true ? (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => onShareImage(item)} accessibilityRole="button" accessibilityLabel="share as an image">
+            <TouchableOpacity hitSlop={6} style={styles.actionBtn} onPress={() => onShareImage(item)} accessibilityRole="button" accessibilityLabel="share as an image">
               <Ionicons name="share-social-outline" size={18} color={T.onInkMuted} />
             </TouchableOpacity>
           ) : null}
@@ -219,7 +224,10 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
           {/* No share on campus posts: it would leak them outside the campus */}
           {!isCampus && !(v2 && onShareImage) && (
             <TouchableOpacity
+              hitSlop={6}
               style={styles.actionBtn}
+              accessibilityRole="button"
+              accessibilityLabel="share"
               onPress={() => {
                 soundTap();   // 🔔 tap before share
                 Share.share({

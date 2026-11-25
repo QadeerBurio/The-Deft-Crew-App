@@ -105,6 +105,20 @@ function ser(ctx, n) {
   out.children = ser(ctx, n.props?.children);
   return out;
 }
+// Owner (25 Nov 2026): the accessibility fix goes to everyone (P5-7 follow-up): the confession composer / card gained
+// labels, roles, states, 6-8 pt hit slop, the 1.3 text cap, and two styles (the photo-remove button 44 pt, the post
+// button minHeight 44). The "identical to before" comparisons below therefore compare with exactly those removed from
+// BOTH sides (deA11y): anything else that differs still fails. The fix itself is checked on its own (P5-7 section).
+const A11Y_KEYS = new Set(["accessibilityLabel", "accessibilityRole", "accessibilityState", "accessible", "hitSlop", "maxFontSizeMultiplier"]);
+const A11Y_STYLES = [
+  ['{"position":"absolute","top":4,"right":4,"minWidth":44,"minHeight":44,"alignItems":"center","justifyContent":"center"}', '{"position":"absolute","top":8,"right":8}'],
+  ['"overflow":"hidden","marginBottom":10,"minHeight":44}', '"overflow":"hidden","marginBottom":10}'],
+];
+function deA11y(s) {
+  let t = s;
+  for (const [now, before] of A11Y_STYLES) t = t.split(now).join(before);
+  return JSON.stringify(JSON.parse(t), (k, v) => (v && typeof v === "object" && !Array.isArray(v) && v.props && typeof v.props === "object" ? { ...v, props: Object.fromEntries(Object.entries(v.props).filter(([pk]) => !A11Y_KEYS.has(pk))) } : v));
+}
 async function snapshots(file, flag, v2 = false) {
   const ctx = setup(file, { flag, v2 });
   await tick(80);
@@ -130,7 +144,7 @@ async function snapshots(file, flag, v2 = false) {
     before = await snapshots(path.join(oldDir, "ConfessionScreen.js"), false);
   } finally { fs.rmSync(oldDir, { recursive: true, force: true }); }
   after = await snapshots(SCREEN, false);
-  for (const k of ["feed", "composer", "comments"]) ok(before[k] === after[k], `flag off: ${k} identical to before (${after[k].length} chars)`);
+  for (const k of ["feed", "composer", "comments"]) ok(deA11y(before[k]) === deA11y(after[k]), `flag off: ${k} identical to before, apart from the accessibility fix (${after[k].length} chars)`);
 
   console.log("── P4 split-only commit 488b340 (ConfessionFeed.js + confessionApi.js): exactly the screen before it (cb1e5f8)");
   const fromGit = (rev, files, into) => { fs.mkdirSync(into, { recursive: true }); for (const f of files) { try { fs.writeFileSync(path.join(into, `${f}.js`), execSync(`git show ${rev}:app/src/screens/Social/${f}.js`, { cwd: APP, stdio: ["ignore", "pipe", "ignore"] }).toString()); } catch { /* not in that commit */ } } };
@@ -150,12 +164,12 @@ async function snapshots(file, flag, v2 = false) {
 
   console.log("── P4a with confessionsV2 off: the screen as before the split; with confessionSafety only the photo button is new");
   const nowOff = await snapshots(SCREEN, false);
-  for (const k of ["feed", "composer", "comments"]) ok(nowOff[k] === pre[false][k], `both flags off: ${k} identical to before P4a`);
+  for (const k of ["feed", "composer", "comments"]) ok(deA11y(nowOff[k]) === deA11y(pre[false][k]), `both flags off: ${k} identical to before P4a, apart from the accessibility fix`);
   const nowSafety = await snapshots(SCREEN, true);
   SKIP = new Set(["add a photo"]);
   const nowSafetyNoPhoto = await snapshots(SCREEN, true);
   SKIP = new Set();
-  for (const k of ["feed", "composer", "comments"]) ok(nowSafetyNoPhoto[k] === pre[true][k], `confessionSafety on, confessionsV2 off: ${k} identical to before P4a apart from the photo button`);
+  for (const k of ["feed", "composer", "comments"]) ok(deA11y(nowSafetyNoPhoto[k]) === deA11y(pre[true][k]), `confessionSafety on, confessionsV2 off: ${k} identical to before P4a apart from the photo button and the accessibility fix`);
   ok(nowSafety.composer.includes('"accessibilityLabel":"add a photo"') && !pre[true].composer.includes("add a photo"), "…the composer has the new 'add a photo' button (confessionSafety: images are checked)");
 
   console.log("── flag on");

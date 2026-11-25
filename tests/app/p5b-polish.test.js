@@ -155,7 +155,7 @@ global.__DEV__ = false;
 
   // P5-7: text scaling capped (MAX_FONT_SCALE, 1.3) on every Text of the upgrade's new screens; none of them animates
   {
-    const NEW = ["screens/Resume/ResumeFinish.js", "screens/Resume/ResumeStart.js", "screens/Resume/ResumeCoachChat.js", "screens/Resume/ResumeFeedback.js", "screens/Resume/ResumeImportReview.js", "screens/Crew/AmbassadorIntro.js", "screens/Crew/AmbassadorHub.js", "screens/Crew/AmbassadorApply.js", "ui/ShareCard.js", "push/PushAskHost.js", "screens/home/CityCheckCard.js"];
+    const NEW = ["screens/Resume/ResumeFinish.js", "screens/Resume/ResumeStart.js", "screens/Resume/ResumeCoachChat.js", "screens/Resume/ResumeFeedback.js", "screens/Resume/ResumeImportReview.js", "screens/Crew/AmbassadorIntro.js", "screens/Crew/AmbassadorHub.js", "screens/Crew/AmbassadorApply.js", "screens/Social/ConfessionComposer.js", "screens/Social/ConfessionCard.js", "ui/ShareCard.js", "push/PushAskHost.js", "screens/home/CityCheckCard.js"];
     const uncapped = [], animated = [];
     for (const f of NEW) {
       const s = H.read(`app/src/${f}`);
@@ -166,6 +166,8 @@ global.__DEV__ = false;
     }
     ok(uncapped.length === 0, `every Text in the ${NEW.length} new screens caps its scaling (maxFontSizeMultiplier)`, uncapped.join(", "));
     ok(animated.length === 0, "…and none animates without checking reduce motion", animated.join(", "));
+    const cc = H.read("app/src/screens/Social/ConfessionCard.js");
+    ok((cc.match(/<TouchableOpacity\s+hitSlop=\{6\}\s+style=\{\[?styles\.actionBtn/g) || []).length === 7, "confession card: the 7 action buttons get 6 pt hit slop (44 pt to touch; owner: for everyone)");
   }
 
   // header search

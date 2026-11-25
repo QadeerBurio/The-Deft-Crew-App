@@ -132,9 +132,9 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 11, fontFamily: F.body, color: T.textFaint, textAlign: 'right', marginBottom: 12 },
   previewContainer: { position: 'relative', marginBottom: 12, borderRadius: 12, overflow: 'hidden' },
   previewImage: { width: '100%', height: 180, borderRadius: 12 },
-  removeImage: { position: 'absolute', top: 8, right: 8 },
+  removeImage: { position: 'absolute', top: 4, right: 4, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, // P5-7: 44 pt to touch; the 36 pt circle stays where it was
   removeImageBtn: { backgroundColor: T.overlay, borderRadius: 12, padding: 4 },
-  submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 10 },
+  submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 10, minHeight: 44 }, // P5-7 (it is 46 already)
   submitGradient: { paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
   submitText: { color: T.white, fontFamily: F.bodyBold, fontSize: 16 },
 
