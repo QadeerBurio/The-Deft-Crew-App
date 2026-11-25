@@ -306,6 +306,28 @@ async function snapshots(file, flag, v2 = false) {
     }
     ctx.restore();
   }
+  console.log("── r8: EVERY flag on together (the confession screen and its main actions)");
+  {
+    const ALL = new Proxy({}, { has: () => true, get: () => true }); // useFlag(anything) → true
+    const allFeed = () => baseFeed().map((c, i) => ({ ...c, meTooCount: 1, meTooByCurrentUser: false, handle: i === 0 ? "brave-kitab-512" : undefined, tag: "rant", mood: "sus", following: false, saved: false, shareable: true, myVote: i === 2 ? undefined : null, poll: i === 1 ? { options: [{ text: "chai", votes: 1 }, { text: "coffee", votes: 0 }], total: 1, myVote: null } : undefined }));
+    const ctx = setup(SCREEN, { flag: true, v2: true, flags: ALL, server: { rulesAccepted: true, config: { tags: [{ id: "rant", label: "rant" }], prompts: ["a small win this week"], moods: ["sus"], maxLength: 500, handle: { enabled: true, handle: "brave-kitab-512" } }, feed: allFeed }, extraMocks: { "../../ui/ShareCard": { __esModule: true, default: () => null } } });
+    await tick(150);
+    let r = rows(ctx);
+    ok(r.length === 3 && H.textOf(r[0].tree).includes("@brave-kitab-512"), "renders with every flag on: handle, tag, mood, poll, me too, follow, save, share, arrows", H.textOf(r[0].tree).slice(0, 120));
+    await press(r[0].tree, "me too, 1"); await tick(40);
+    await press(rows(ctx)[0].tree, "vote down"); await tick(40);
+    await press(rows(ctx)[0].tree, "follow replies"); await tick(40);
+    await press(rows(ctx)[0].tree, "save"); await tick(40);
+    const puts = ctx.calls.filter((c) => c.method === "PUT").map((c) => c.url.split("/").pop());
+    ok(["metoo", "vote", "follow", "save"].every((k) => puts.includes(k)), "…me too, vote, follow and save each reach the server", puts.join(","));
+    await press(ctx.root.tree, "confess"); await tick(300);
+    find(ctx.root.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "write your confession").props.onChangeText("a small win this week: passed my quiz"); await tick(30);
+    ok(!find(ctx.root.tree, (x) => x.props.accessibilityRole === "alert"), "…clean text: no live hint");
+    await find(ctx.root.tree, (x) => x.type === "TouchableOpacity" && H.textOf(x).includes("post confession")).props.onPress(); await tick(150);
+    ok(ctx.calls.some((c) => c.url.includes("/confessions/create") && c.body?.text?.startsWith("a small win")), "…posting works with every flag on");
+    ctx.restore();
+  }
+
   console.log("── r7: up / down voting (confessionsVoting; used only for auto-hide, no counts)");
   for (const on of [false, true]) {
     const vFeed = () => baseFeed().map((c, i) => (i === 0 ? { ...c, myVote: null } : i === 1 ? { ...c, myVote: "down" } : c)); // the 3rd: my own (no myVote)
