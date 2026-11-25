@@ -50,6 +50,17 @@ Also in step 0:
 - **Runtime:** the policy is `appVersion`, so each store version is its own runtime (`1.2.2`, `1.2.1`, ...). An update
   reaches only phones whose installed binary has exactly that version.
 
+### What the read-only checks found (r9, 25 Nov 2026)
+
+- Logged in as `aqkhan622`; this checkout publishes to **112506b0**.
+- The iOS store builds 1.2.2 (build 69, a717165) and 1.2.1 (build 66, 707a55d) are listed in 112506b0, but the
+  `updates.url` in both commits is **d14cdf3a**: iOS phones ask d14cdf3a (aqkhan621). No Android build is listed in
+  112506b0: the Android store builds were made in d14cdf3a too. So **`LIVE_PROJECT` = d14cdf3a (aqkhan621)** for the
+  builds the developer could see; confirm Android on the d14cdf3a dashboard.
+- The iOS build record shows **no channel**. If the dashboard confirms no channel on the production builds, no
+  `eas update` can reach them (in either project): the 1.3.0 store build (with a channel and one project) is the way.
+  Check this before anything in §2.
+
 ## 1. Can a runtime take this update? (native compatibility)
 
 For each live version `V`: `git diff <V's build commit> main -- package.json`.

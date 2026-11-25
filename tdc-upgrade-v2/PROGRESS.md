@@ -827,6 +827,30 @@ Everything new is behind a flag, all off. Flag off = today's behaviour (checked 
 - Docs final: OTA-PLAN.md (step 0 = which Expo project the live builds listen to), release-1.3.0.md (three owner values
   only), FLAG-ROLLOUT.md (r7 / r8 flags and controls).
 
+## r9: launch (owner, 25 Nov 2026; branch `upgrade/r9-launch` in all three repos)
+
+Owner decisions: the 10 templates and the handle word list approved; confessionsVoting stays off; gallery filters
+dropped.
+
+- **`launchV2`** (off by default): turns on 38 flags for an account (unless killed in Railway or forced off for it);
+  per account or "default for all students" in admin (opt-in: no row = off) or Railway `FLAG_LAUNCH_V2`.
+  **`launchLinks`** (off): resumePublicPage + confessionShare, after gettdc.pk is on Vercel. Never in a switch:
+  confessionsVoting, accountStatusEnforce, socketTokenRequired, adminRbacEnforce, adminSessionsV1, referralVerifyGate.
+  `server/tests/r9-launch` 22/22 (off = today, on = all 38, links / never untouched, force-off and kill win, all students).
+- **Links that work today**: invite links (crew share, WhatsApp, the share card's QR) are gettdc.pk/i/ only with
+  launchLinks on; otherwise the store link with the code in the text (the safe default in `growth/inviteLinks.js`).
+  Checked live: gettdc.pk (Hostinger) serves the portal app, so /verify/<id> (credential certificates) works today;
+  /i/, /r/, /c/ land on the home page until gettdc.pk is on Vercel.
+- **Confession safety defaults to observe** (nothing held or blocked; "would have acted" logged); FLAG-ROLLOUT.md: enforce
+  after 3 days of review. The enforce suites now set enforce themselves.
+- **Final check with launchV2 on**: `server/tests/r9-launch-flows` 32/32 (invite signup, crew, apply, resume create →
+  coach → template → feedback → cover letter → the PDF's HTML, confessions post / poll / vote / follow / report,
+  voting and share still off, inbox, settings, goals, next action); `app/tests/launch-smoke` renders all 65 navigation
+  screens with launchV2 on and with every flag off: no screen fails only with the switch on (11 can't render in a
+  generic stub environment even with flags off; they have their own suites).
+- **EAS (read-only)**: see BUILD-APK.md / OTA-PLAN.md: the live builds listen to d14cdf3a (aqkhan621); this checkout
+  publishes to 112506b0 (aqkhan622); the iOS build record shows no update channel.
+
 ## Final status after r8 (25 Nov 2026)
 
 "Built" = the code is written, tested and on main, with every new feature behind a flag that is off. Switching a

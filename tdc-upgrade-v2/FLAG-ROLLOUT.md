@@ -17,6 +17,35 @@ Play / App Store crashes, support messages); never in the same hour as a server 
 (OTA-PLAN.md); off at the first real problem. The app must be on the release that contains the feature (OTA or
 store) before its flag means anything.
 
+## Launch (r9): the master switches
+
+**`launchV2`** turns on, for each account it's on for, these 38 flags (unless that flag is killed in Railway or forced off
+for the account): growthV2, ambassadorV2, shareCards, squadMission, chatPushV1, pushOpenTracking, pushBudgetV1,
+pushAskV2, unifiedInbox, notifSettingsV2, pushCopyV2, resumeV2, resumeCoach, resumeSpeak, resumeTemplatesV2,
+resumeFeedback, resumeFinish, resumeVerified, resumeOutcomeStats, resumeWriter, confessionsV2, confessionSafety,
+confessionPolls, confessionFollow, confessionRecap, confessionHandles, lowDataImages, persistCache, optimisticActions,
+prefetchDetails, headerSearch, cityCheck, polishEmptyStates, celebrationsPlus, onboardingGoals, homeNextAction,
+tabletLayout, nativeStackDrawer.
+
+**`launchLinks`** (only after gettdc.pk is on Vercel) turns on resumePublicPage and confessionShare. While it is off, every
+invite link the app builds is the store link (with the code in the text), never a gettdc.pk/i link.
+
+**Never in a switch** (each stays a separate decision): confessionsVoting (owner: off), accountStatusEnforce,
+socketTokenRequired, adminRbacEnforce, adminSessionsV1, referralVerifyGate.
+
+How:
+1. Test accounts: admin → features → "Launch: all v2 features" → force on per account. Check the RELEASE-1…6 manual tests
+   and the r9 flows (invite signup, crew, apply, resume start → PDF, confessions, inbox, goals, next action).
+2. Everyone: admin → features → "Launch: all v2 features" → **default for all students: on** (or Railway
+   `FLAG_LAUNCH_V2=on`). Employers and brands are not affected.
+3. A single feature misbehaving: force it off (admin, per account) or kill it (Railway `FLAG_<NAME>=off`): the switch never
+   overrides that. Everything off: the default back to off / remove the variable.
+
+**Confession safety starts in OBSERVE mode** (the built-in default since r9): every confession is checked after saving,
+nothing is held or blocked, "would have acted" is logged. **After 3 days**, review admin → Safety → "observed" (false
+positives, the word list) with the developer, then switch Safety → settings → mode to **enforce**. A saved setting
+always wins over the default.
+
 ## Before anything (Railway variables, owner)
 
 `SUPER_ADMIN_IDS`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL` (safety@gettdc.pk), `SURPLUS_CODE_SECRET` (32+
